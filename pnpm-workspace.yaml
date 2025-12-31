@@ -1,0 +1,4 @@
+allowBuilds:
+  unrs-resolver: false
+patchedDependencies:
+  eslint-plugin-import: patches/eslint-plugin-import.patch
