@@ -1,0 +1,22 @@
+{
+  "name": "@heater-control/infra",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "deploy": "cdk deploy --all",
+    "destroy": "cdk destroy --all",
+    "diff": "cdk diff",
+    "synth": "cdk synth"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.258.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "aws-cdk": "^2.1126.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}

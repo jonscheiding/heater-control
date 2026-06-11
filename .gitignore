@@ -2,4 +2,12 @@ node_modules
 .envrc
 
 dist
-tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# CDK
+cdk.out
+cdk.context.json
+
+# local env
+.env.local
+.env.production

@@ -1,4 +1,10 @@
+packages:
+  - api
+  - web
+  - infra
+
 allowBuilds:
+  esbuild: true
   unrs-resolver: false
 patchedDependencies:
   eslint-plugin-import: patches/eslint-plugin-import.patch

@@ -5,6 +5,9 @@ import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
 import * as pluginImportResolverTypescript from "eslint-import-resolver-typescript";
 import pluginImport from "eslint-plugin-import";
+import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
+import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
@@ -27,6 +30,26 @@ export default defineConfig([
     ],
     languageOptions: {
       parserOptions: { projectService: true },
+    },
+  },
+  {
+    files: ["{infra,api}/**/*.{ts,mts,cts}", "*.ts"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ["web/**/*.{ts,tsx,mts,cts}"],
+    languageOptions: {
+      globals: globals.browser,
+    },
+    extends: [
+      pluginReact.configs.flat.recommended!,
+      pluginReact.configs.flat["jsx-runtime"]!,
+      pluginReactHooks.configs.flat["recommended-latest"],
+    ],
+    settings: {
+      react: { version: "18" },
     },
   },
   {
