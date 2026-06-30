@@ -1,0 +1,45 @@
+input_boolean:
+  heater_1:
+    name: "Heater 1"
+    icon: mdi:radiator
+
+timer:
+  heater_1_autooff:
+    duration: "02:00:00"
+    restore: true
+
+automation:
+  - alias: "Heater 1: auto-off wiring"
+    use_blueprint:
+      path: heater_control/switch_with_auto_off.yaml
+      input:
+        switch: input_boolean.heater_1
+        autooff_timer: timer.heater_1_autooff
+
+# --- POC-only: fake power metering ------------------------------------
+# When you swap input_boolean.heater_1 for a real switch.heater_1 from a
+# Z-Wave / Zigbee / WiFi metering integration, delete this whole section.
+# The real switch's integration will create its own sensor.heater_1_power.
+
+input_number:
+  heater_1_simulated_watts:
+    name: "Heater 1 simulated wattage"
+    min: 0
+    max: 2000
+    step: 100
+    initial: 1200
+    unit_of_measurement: "W"
+    icon: mdi:flash
+
+template:
+  - sensor:
+      - name: "Heater 1 power"
+        unique_id: heater_1_power
+        unit_of_measurement: "W"
+        device_class: power
+        state: >
+          {% if is_state('input_boolean.heater_1', 'on') %}
+            {{ states('input_number.heater_1_simulated_watts') | float(0) }}
+          {% else %}
+            0
+          {% endif %}

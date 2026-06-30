@@ -1,0 +1,10 @@
+automation:
+  - alias: "Heater schedules: turn on from calendar event"
+    trigger:
+      - platform: calendar
+        event: start
+        entity_id: calendar.heater_schedules
+    action:
+      - service: homeassistant.turn_on
+        target:
+          entity_id: "{{ trigger.calendar_event.description }}"

@@ -1,0 +1,58 @@
+blueprint:
+  name: Switch with auto-off
+  description: >
+    Pairs a toggleable entity (switch or input_boolean) with a timer that
+    automatically turns it off after a fixed duration. The timer is exposed
+    as a regular HA entity so consumers (SPA, Lovelace) can show the
+    countdown or planned-off time.
+  domain: automation
+  input:
+    switch:
+      name: Switch
+      description: The entity to auto-turn-off (switch or input_boolean).
+      selector:
+        entity:
+          domain:
+            - switch
+            - input_boolean
+    autooff_timer:
+      name: Auto-off timer
+      description: The timer entity that drives the auto-off.
+      selector:
+        entity:
+          domain: timer
+
+mode: queued
+
+trigger:
+  - platform: state
+    entity_id: !input switch
+    to: "on"
+    id: "on"
+  - platform: state
+    entity_id: !input switch
+    to: "off"
+    id: "off"
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input autooff_timer
+    id: "finished"
+
+action:
+  - choose:
+      - conditions: "{{ trigger.id == 'on' }}"
+        sequence:
+          - service: timer.start
+            target:
+              entity_id: !input autooff_timer
+      - conditions: "{{ trigger.id == 'off' }}"
+        sequence:
+          - service: timer.cancel
+            target:
+              entity_id: !input autooff_timer
+      - conditions: "{{ trigger.id == 'finished' }}"
+        sequence:
+          - service: homeassistant.turn_off
+            target:
+              entity_id: !input switch
