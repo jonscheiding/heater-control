@@ -33,7 +33,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["{infra,api}/**/*.{ts,mts,cts}", "*.ts"],
+    files: ["*.ts"],
     languageOptions: {
       globals: globals.node,
     },

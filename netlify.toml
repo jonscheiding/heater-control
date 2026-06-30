@@ -1,0 +1,12 @@
+[build]
+  command = "pnpm --filter @heater-control/web build"
+  publish = "web/dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+  PNPM_VERSION = "11"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

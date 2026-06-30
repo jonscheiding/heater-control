@@ -1,109 +1,107 @@
-# Heater Control — MVP Deploy Notes
+# Heater Control — Deploy Notes
+
+The system is two moving parts:
+
+1. **Home Assistant** — self-hosted, runs the heaters and exposes the API the SPA talks to.
+2. **SPA** (`web/`) — static React app, hosted on Netlify.
+
+Auth chain: upstream OIDC issuer (Google for testing, ScheduleMaster proxy later) → HA via the `auth_oidc` HACS integration → SPA via HA's OAuth2 flow.
 
 ## Prerequisites
 
-- Node 20+, pnpm 9+
-- AWS CLI configured with credentials (`aws sts get-caller-identity` works)
-- A SmartThings account that owns the switches/sensors, with a Personal Access Token
-- A Google Cloud project with an OAuth 2.0 Client ID (Web application)
+- Node 24+, pnpm 11+
+- A Home Assistant instance you control (Docker, HA OS, etc.)
+- A Google Cloud project with an OAuth 2.0 Client ID (Web application) — temporary, for POC login
+- A Netlify account (or other static host)
 
-## One-time setup
+## 1. Home Assistant setup
 
-### 1. Install
+### 1a. Start HA in Docker (skip if already running)
 
-```bash
-cd /Users/jonscheiding/Code/Personal/heater-control
-pnpm install
-```
+Standard `homeassistant/home-assistant` image. Volume-mount a config directory so settings persist across container restarts.
 
-### 2. Find your SmartThings location id
+### 1b. Install HACS
 
-```bash
-curl -H "Authorization: Bearer <PAT>" https://api.smartthings.com/v1/locations
-```
-
-Note the `locationId` for the hangar location.
-
-### 3. Get a Google OAuth client
-
-Cloud Console → APIs & Services → Credentials → Create Credentials → OAuth client ID → Web application.
-
-Authorized JavaScript origins:
-
-- `http://localhost:5173` (dev)
-- `https://<AppUrl>` (added after first deploy)
-
-Authorized redirect URIs:
-
-- `http://localhost:5173` (dev)
-- `https://<AppUrl>` (added after first deploy)
-
-Note the **Client ID** (no client secret needed — public SPA uses PKCE).
-
-### 4. Bootstrap CDK (first time only per account/region)
+HACS works in HA Container — the install is a one-liner inside the running container:
 
 ```bash
-cd infra
-npx cdk bootstrap
+docker exec -it <ha-container> bash
+wget -O - https://get.hacs.xyz | bash -
+exit
+docker restart <ha-container>
 ```
 
-## Deploy
+Then in the HA UI: Settings → Devices & Services → Add Integration → search "HACS" → authorize via GitHub (device-code flow).
 
-### Deploy the app stack
+### 1c. Install the `auth_oidc` integration via HACS
 
-```bash
-export GOOGLE_CLIENT_ID=...
-export SMARTTHINGS_LOCATION_ID=...
-export ALLOWED_EMAILS=jon@example.com,pilot2@example.com
+Custom repository: `https://github.com/christiaangoossens/hass-oidc-auth` (category: Integration). Then in HACS → Integrations, search "OIDC Auth" → download → restart HA.
 
-pnpm --filter @heater-control/infra deploy
+Check the integration's README for current `configuration.yaml` schema — the keys have shifted between releases.
+
+### 1d. Configure Google as the OIDC issuer (POC)
+
+1. Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client → Web application.
+2. Authorized redirect URI: whatever the `auth_oidc` README specifies as its callback path on your HA host.
+3. Add the resulting `client_id` and `client_secret` to HA's `auth_oidc` config block, with `discovery_url: https://accounts.google.com/.well-known/openid-configuration`.
+
+### 1e. Allow the SPA's origin (CORS) and trust its reverse proxy if any
+
+In HA's `configuration.yaml`:
+
+```yaml
+http:
+  cors_allowed_origins:
+    - http://localhost:5173 # vite dev
+    - https://<your-netlify-domain> # prod SPA
+  # If HA sits behind a reverse proxy (Nabu Casa, traefik, etc.):
+  # use_x_forwarded_for: true
+  # trusted_proxies:
+  #   - <proxy IP>
 ```
 
-Note the `AppUrl` (CloudFront), `WebBucketName`, and `SmartThingsSecretArn` outputs.
+Restart HA after changes.
 
-### Update the Google OAuth client
+### 1f. Expose HA to the public internet
 
-Add `https://<AppUrl>` to both Authorized JavaScript origins and Authorized redirect URIs in the Google Cloud Console.
+Pilots' browsers need to reach HA directly. Options:
 
-### Populate the SmartThings secret
+- **Nabu Casa** (easiest, ~$75/yr): one-click public HTTPS endpoint
+- **Reverse proxy + DDNS + Let's Encrypt** (free, more setup)
+- **Tailscale** (only viable for tech-comfortable users)
 
-```bash
-aws secretsmanager put-secret-value \
-  --secret-id <SmartThingsSecretArn> \
-  --secret-string '<your-PAT>'
-```
+Whichever you pick, the public URL is what goes into `VITE_HA_URL` for the SPA's production build.
 
-### Build and upload the frontend
+## 2. SPA deployment (Netlify)
 
-```bash
-cd web
-cat > .env.production <<EOF
-VITE_OIDC_AUTHORITY=https://accounts.google.com
-VITE_OIDC_CLIENT_ID=$GOOGLE_CLIENT_ID
-EOF
+Connect the Netlify site to this repo. `netlify.toml` at the repo root configures the build:
 
-pnpm build
-aws s3 sync dist/ s3://<WebBucketName>/ --delete
-aws cloudfront create-invalidation --distribution-id <DistributionId> --paths "/*"
-```
+- Build command: `pnpm --filter @heater-control/web build`
+- Publish directory: `web/dist`
+- Node 24, pnpm 11
 
-(Find `DistributionId` in the CloudFront console or via `aws cloudfront list-distributions`.)
+Set the environment variable in the Netlify dashboard:
 
-## Smoke test
+- `VITE_HA_URL` = your HA's public URL (no trailing slash)
 
-1. Open `https://<AppUrl>` on your phone
-2. Tap Sign In → consent screen → redirected back signed in
-3. If your email isn't in `ALLOWED_EMAILS`, API calls return 403 — you'll see "Failed to load devices"
-4. With an allowed email: list of devices from the configured SmartThings location appears
-5. Tap the toggle on a switch — the SmartThings device should change state within a second
+Deploys trigger on push to the default branch.
+
+## 3. Smoke test
+
+1. Open the Netlify URL on your phone.
+2. The SPA redirects to HA's login.
+3. Click "Sign in with Google" (provided by `auth_oidc`).
+4. Consent flow → redirected back to the SPA, signed in.
+5. List of switch entities from HA appears; toggling one changes the underlying device.
 
 ## Dev loop
 
-- Frontend: `pnpm dev:web` with `web/.env.local` pointing `VITE_API_BASE` to the API Gateway URL (CloudFront's `/api/*` rewrite only applies in prod). Add `http://localhost:5173` to the Google OAuth client's authorized origins.
-- API: there's no local Lambda emulator wired up; iterate by `pnpm --filter @heater-control/infra deploy` — the `NodejsFunction` only redeploys the Lambda bundle, which is fast.
+- HA: keep the Docker container running locally.
+- SPA: `pnpm dev` (alias for `pnpm --filter @heater-control/web dev`). Vite serves at `http://localhost:5173`. Add that origin to HA's `cors_allowed_origins` and to your Google OAuth client's authorized origins/redirects.
+- `web/.env.local` overrides `VITE_HA_URL` if you want to point dev at a non-default HA URL.
 
-## Known follow-ups (post-MVP)
+## Known follow-ups
 
-- Phase 2: EventBridge Scheduler for user-driven schedules, DynamoDB table for schedule records
-- Phase 3: Replace Google with the ScheduleMaster auth proxy — change `VITE_OIDC_*` and `OIDC_*` env vars, drop the `ALLOWED_EMAILS` gate (the proxy itself is the gate)
-- Local Lambda dev (SAM, or wrap Hono in a plain Node server for `pnpm dev:api`)
+- **Phase 2 scheduling**: define HA calendar entity for one-off turn-ons + `timer` entities for auto-off; SPA gains a scheduling UI against HA's calendar event REST endpoints.
+- **Phase 3 ScheduleMaster integration**: Python `custom_component` at `custom_components/schedulemaster/`, polls ScheduleMaster, exposes bookings as a calendar entity. Replace Google with the ScheduleMaster auth proxy at this point.
+- **Mobile companion app login flow**: validate `auth_oidc` works in the HA Companion app if pilots will use it.

@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "deploy": "pnpm --filter @heater-control/infra deploy",
-    "dev:api": "pnpm --filter @heater-control/api dev",
-    "dev:web": "pnpm --filter @heater-control/web dev",
+    "dev": "pnpm --filter @heater-control/web dev",
     "lint": "eslint",
     "prepare": "husky"
   },

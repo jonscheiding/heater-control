@@ -1,7 +1,5 @@
 packages:
-  - api
   - web
-  - infra
 
 allowBuilds:
   esbuild: true
