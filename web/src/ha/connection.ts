@@ -37,5 +37,20 @@ async function doConnect(): Promise<Connection> {
       }
     },
   });
+  clearAuthParamsFromUrl();
   return await createConnection({ auth });
+}
+
+function clearAuthParamsFromUrl(): void {
+  const url = new URL(window.location.href);
+  let dirty = false;
+  for (const key of ["auth_callback", "code", "state"]) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      dirty = true;
+    }
+  }
+  if (dirty) {
+    window.history.replaceState({}, "", url.toString());
+  }
 }

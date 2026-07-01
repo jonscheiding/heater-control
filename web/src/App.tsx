@@ -1,16 +1,20 @@
 import {
-  callService,
   subscribeEntities,
   type Connection,
   type HassEntities,
+  type HassUser,
 } from "home-assistant-js-websocket";
 import { useEffect, useState } from "react";
 
+import { Banner } from "./components/Banner.js";
+import { HeaterList } from "./components/HeaterList.js";
 import { connect } from "./ha/connection.js";
+import { getCurrentUser } from "./ha/user.js";
 
 export default function App() {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [entities, setEntities] = useState<HassEntities>({});
+  const [user, setUser] = useState<HassUser | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,10 +22,16 @@ export default function App() {
     let unsubscribe: (() => void) | undefined;
 
     connect()
-      .then((conn) => {
+      .then(async (conn) => {
         if (cancelled) return;
         setConnection(conn);
         unsubscribe = subscribeEntities(conn, setEntities);
+        try {
+          const currentUser = await getCurrentUser(conn);
+          if (!cancelled) setUser(currentUser);
+        } catch {
+          // Non-fatal — banner just skips the welcome line.
+        }
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -34,59 +44,31 @@ export default function App() {
     };
   }, []);
 
-  if (error) {
-    return (
-      <main>
-        <h1>Heater Control</h1>
-        <p>Couldn&rsquo;t connect to Home Assistant: {error}</p>
-      </main>
-    );
-  }
-
-  if (!connection) {
-    return (
-      <main>
-        <h1>Heater Control</h1>
-        <p>Connecting&hellip;</p>
-      </main>
-    );
-  }
-
-  const TOGGLEABLE_PREFIXES = ["switch.", "input_boolean."];
-  const switches = Object.values(entities)
-    .filter((e) => TOGGLEABLE_PREFIXES.some((p) => e.entity_id.startsWith(p)))
-    .sort((a, b) => a.entity_id.localeCompare(b.entity_id));
+  const isLoaded = Object.values(entities).length > 0;
 
   return (
-    <main>
-      <h1>Heater Control</h1>
-      {switches.length === 0 ? (
-        <p>No switch entities found.</p>
-      ) : (
-        <ul>
-          {switches.map((s) => {
-            const isOn = s.state === "on";
-            return (
-              <li key={s.entity_id}>
-                <strong>{s.attributes.friendly_name ?? s.entity_id}</strong>{" "}
-                <span>({s.state})</span>{" "}
-                <button
-                  onClick={() => {
-                    void callService(
-                      connection,
-                      "homeassistant",
-                      isOn ? "turn_off" : "turn_on",
-                      { entity_id: s.entity_id },
-                    );
-                  }}
-                >
-                  {isOn ? "Turn off" : "Turn on"}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </main>
+    <div className="min-h-screen bg-slate-100">
+      <Banner username={user?.name ?? null} />
+      <main className="py-4 sm:py-6">
+        {error && (
+          <div className="mx-auto max-w-2xl rounded bg-red-50 p-4 text-red-800 sm:rounded-lg">
+            Couldn&rsquo;t connect to Home Assistant: {error}
+          </div>
+        )}
+        {!error && !connection && (
+          <div className="mx-auto max-w-2xl p-4 text-center text-slate-600">
+            Connecting&hellip;
+          </div>
+        )}
+        {!isLoaded && connection && (
+          <div className="mx-auto max-w-2xl p-4 text-center text-slate-600">
+            Connecting&hellip;
+          </div>
+        )}
+        {isLoaded && connection && (
+          <HeaterList connection={connection} entities={entities} />
+        )}
+      </main>
+    </div>
   );
 }
