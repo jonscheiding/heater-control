@@ -19,7 +19,7 @@ export function PowerButton({ state, label, onToggle }: Props) {
       type="button"
       onClick={onToggle}
       aria-label={`${label}: ${STATUS_LABELS[state]}. Tap to toggle.`}
-      className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-white shadow-md transition ${COLOR_CLASSES[state]}`}
+      className={`flex h-10 w-10 shrink-0 p-2 items-center justify-center rounded-full text-white shadow-md transition ${COLOR_CLASSES[state]}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

@@ -9,7 +9,7 @@ export function BasicButton({ children, onClick }: Props) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-16 w-16 shrink-0 p-4 items-center justify-center rounded-full text-white shadow-md transition"
+      className="flex h-10 w-10 shrink-0 p-4 items-center justify-center rounded-full text-black text-xs bg-taupe-100 shadow-md transition"
     >
       {children}
     </button>

@@ -19,9 +19,18 @@ export function CalendarButton({ onClick }: Props) {
       type="button"
       onClick={onClick}
       aria-label="Choose date/time to turn on"
-      className="flex h-16 w-16 shrink-0 p-4 items-center justify-center rounded-full text-white shadow-md transition"
+      className="flex h-10 w-10 shrink-0 p-2 items-center justify-center rounded-full text-white shadow-md transition bg-taupe-100"
     >
-      <svg viewBox="0 0 24 24" fill="none">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-full w-full"
+      >
         <g id="SVGRepo_bgCarrier" strokeWidth="0" />
         <g
           id="SVGRepo_tracerCarrier"
