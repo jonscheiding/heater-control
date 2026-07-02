@@ -8,17 +8,19 @@ import {
 const TOKEN_KEY = "ha-tokens";
 
 let connectionPromise: Promise<Connection> | null = null;
+let currentAuth: Auth | null = null;
 
 export function connect(): Promise<Connection> {
   connectionPromise ??= doConnect().catch((err: unknown) => {
     connectionPromise = null;
+    currentAuth = null;
     throw err;
   });
   return connectionPromise;
 }
 
 async function doConnect(): Promise<Connection> {
-  const auth: Auth = await getAuth({
+  currentAuth = await getAuth({
     hassUrl: import.meta.env.VITE_HA_URL,
     saveTokens(data) {
       if (data == null) {
@@ -38,7 +40,7 @@ async function doConnect(): Promise<Connection> {
     },
   });
   clearAuthParamsFromUrl();
-  return await createConnection({ auth });
+  return await createConnection({ auth: currentAuth });
 }
 
 function clearAuthParamsFromUrl(): void {
@@ -53,4 +55,26 @@ function clearAuthParamsFromUrl(): void {
   if (dirty) {
     window.history.replaceState({}, "", url.toString());
   }
+}
+
+export async function haFetch(
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const auth = currentAuth;
+  if (!auth) throw new Error("Not connected to Home Assistant");
+  if (auth.expired) {
+    try {
+      await auth.refreshAccessToken();
+    } catch {
+      // fall through; fetch will 401 if the token is truly bad
+    }
+  }
+  return await fetch(`${import.meta.env.VITE_HA_URL}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${auth.accessToken}`,
+      ...init?.headers,
+    },
+  });
 }

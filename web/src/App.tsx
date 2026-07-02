@@ -66,7 +66,11 @@ export default function App() {
           </div>
         )}
         {isLoaded && connection && (
-          <HeaterList connection={connection} entities={entities} />
+          <HeaterList
+            connection={connection}
+            entities={entities}
+            username={user?.name || "Pilot"}
+          />
         )}
       </main>
     </div>
