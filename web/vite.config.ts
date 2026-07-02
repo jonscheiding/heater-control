@@ -6,5 +6,6 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
+    allowedHosts: ["strongbow.rainbow-inconnu.ts.net"],
   },
 });
