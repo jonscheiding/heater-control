@@ -1,0 +1,91 @@
+<!doctype html>
+<!--
+  Trimmed sample of my.schedulemaster.com/UserInfo.aspx?GETUSER=M .
+  Inputs use the current ASP.NET naming-container prefix (ctl00$CPL1$...).
+  Only the fields the scraper reads are kept faithful; recapture from a live
+  smoke run if ScheduleMaster reworks the page.
+-->
+<html>
+  <head>
+    <title>ScheduleMaster - User Info</title>
+  </head>
+  <body>
+    <form name="ctl00" method="post" action="UserInfo.aspx">
+      <input type="hidden" name="__VIEWSTATE" value="/wEPDwUABDMzMQ==" />
+      <input type="hidden" name="__EVENTTARGET" value="" />
+      <div id="ctl00_CPL1_div_Data">
+        <table>
+          <tr>
+            <td>First Name</td>
+            <td>
+              <input
+                name="ctl00$CPL1$tx_firstname"
+                type="text"
+                id="ctl00_CPL1_tx_firstname"
+                maxlength="32"
+                onchange="Javascript: fieldChanged2();"
+                value="Jonathan"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>MI</td>
+            <td>
+              <input
+                name="ctl00$CPL1$tx_mi"
+                type="text"
+                id="ctl00_CPL1_tx_mi"
+                value="Q"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>Last Name</td>
+            <td>
+              <input
+                name="ctl00$CPL1$tx_lastname"
+                type="text"
+                id="ctl00_CPL1_tx_lastname"
+                value="Scheiding"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>Email</td>
+            <td>
+              <input
+                name="ctl00$CPL1$tx_email"
+                type="text"
+                id="ctl00_CPL1_tx_email"
+                value="jon@example.com"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>Secondary Email</td>
+            <td>
+              <input
+                name="ctl00$CPL1$tx_email2"
+                type="text"
+                id="ctl00_CPL1_tx_email2"
+                value=""
+              />
+            </td>
+          </tr>
+          <tr>
+            <td>Cell</td>
+            <td>
+              <input
+                name="ctl00$CPL1$tx_cellphone"
+                type="text"
+                id="ctl00_CPL1_tx_cellphone"
+                value="555-0100"
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
+      <input type="submit" name="ctl00$CPL1$btnSave" value="Save" />
+    </form>
+  </body>
+</html>

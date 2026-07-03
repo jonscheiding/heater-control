@@ -31,6 +31,16 @@ export default defineConfig([
     languageOptions: {
       parserOptions: { projectService: true },
     },
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
   },
   {
     files: ["*.ts"],

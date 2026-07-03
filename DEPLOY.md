@@ -1,11 +1,12 @@
 # Heater Control — Deploy Notes
 
-The system is two moving parts:
+The system is three moving parts:
 
 1. **Home Assistant** — self-hosted, runs the heaters and exposes the API the SPA talks to.
 2. **SPA** (`web/`) — static React app, hosted on Netlify.
+3. **ScheduleMaster OIDC proxy** (`oidc-proxy/`) — container that lets pilots sign in with their ScheduleMaster credentials; wraps the `sm-client` scraper in a standards OIDC provider.
 
-Auth chain: upstream OIDC issuer (Google for testing, ScheduleMaster proxy later) → HA via the `auth_oidc` HACS integration → SPA via HA's OAuth2 flow.
+Auth chain: upstream OIDC issuer (Google for testing, the ScheduleMaster proxy for production) → HA via the `auth_oidc` HACS integration → SPA via HA's OAuth2 flow.
 
 ## Prerequisites
 
@@ -86,7 +87,31 @@ Set the environment variable in the Netlify dashboard:
 
 Deploys trigger on push to the default branch.
 
-## 3. Smoke test
+## 3. ScheduleMaster OIDC proxy (`oidc-proxy/`)
+
+Production login uses the pilot's ScheduleMaster account instead of Google. The
+proxy is a portable container — deploy it to any container host and configure it
+entirely via env vars (see `oidc-proxy/.env.example`).
+
+1. **Generate a signing key** (once): `pnpm --filter @heater-control/oidc-proxy gen-keys`
+   → store the output as the `OIDC_JWKS` secret. Don't regenerate per deploy, or HA's
+   cached keys break.
+2. **Register HA as the client**: pick `HA_CLIENT_ID`/`HA_CLIENT_SECRET`, set
+   `HA_REDIRECT_URIS` to `auth_oidc`'s callback URL, and set `OIDC_ISSUER` to the proxy's
+   public URL.
+3. **Deploy the container**: `docker build -f oidc-proxy/Dockerfile -t sm-oidc-proxy .`
+   (from the repo root). Recommended host: **Fly.io** (`fly deploy`, scale-to-zero suits a
+   login-only service); alternatives are Railway, or a container beside HA on the same
+   Docker host reusing its Tailscale/reverse-proxy exposure.
+4. **Point HA at it**: merge `homeassistant/auth_oidc.example.yaml` into `configuration.yaml`
+   with the matching discovery URL / client credentials, and add
+   `sm_oidc_client_secret` to `secrets.yaml`. Restart HA.
+5. **Guard against site drift**: run the live smoke tests periodically —
+   `SM_TEST_USERNAME=… SM_TEST_PASSWORD=… pnpm --filter @heater-control/sm-client test:smoke`
+   — to catch ScheduleMaster login-flow changes before pilots do (wire into a scheduled CI
+   job with repo secrets).
+
+## 4. Smoke test
 
 1. Open the Netlify URL on your phone.
 2. The SPA redirects to HA's login.
@@ -103,5 +128,5 @@ Deploys trigger on push to the default branch.
 ## Known follow-ups
 
 - **Phase 2 scheduling**: define HA calendar entity for one-off turn-ons + `timer` entities for auto-off; SPA gains a scheduling UI against HA's calendar event REST endpoints.
-- **Phase 3 ScheduleMaster integration**: Python `custom_component` at `custom_components/schedulemaster/`, polls ScheduleMaster, exposes bookings as a calendar entity. Replace Google with the ScheduleMaster auth proxy at this point.
+- **Phase 3 ScheduleMaster integration**: Python `custom_component` at `custom_components/schedulemaster/`, polls ScheduleMaster, exposes bookings as a calendar entity. (The ScheduleMaster **auth** proxy that replaces Google now lives in `oidc-proxy/` — see section 3.)
 - **Mobile companion app login flow**: validate `auth_oidc` works in the HA Companion app if pilots will use it.
