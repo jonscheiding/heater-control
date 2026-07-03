@@ -60,7 +60,7 @@ importers:
         specifier: ^8.60.1
         version: 8.60.1(eslint@9.39.4(jiti@2.6.1))(typescript@6.0.3)
 
-  oidc-proxy:
+  packages/oidc-proxy:
     dependencies:
       '@heater-control/sm-client':
         specifier: workspace:*
@@ -88,7 +88,7 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@25.0.3)(lightningcss@1.32.0)
 
-  sm-client:
+  packages/sm-client:
     dependencies:
       cheerio:
         specifier: ^1.0.0
@@ -101,7 +101,7 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@25.0.3)(lightningcss@1.32.0)
 
-  web:
+  packages/web:
     dependencies:
       '@tanstack/react-query':
         specifier: ^5.59.20
@@ -4731,7 +4731,7 @@ snapshots:
     dependencies:
       es-errors: 1.3.0
       hasown: 2.0.4
-      side-channel: 1.1.0
+      side-channel: 1.1.1
 
   ipaddr.js@1.9.1: {}
 

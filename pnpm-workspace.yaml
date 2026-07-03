@@ -1,7 +1,5 @@
 packages:
-  - web
-  - sm-client
-  - oidc-proxy
+  - packages/*
 
 allowBuilds:
   esbuild: true
