@@ -1,0 +1,19 @@
+# flyctl launch added from .gitignore
+**/node_modules
+**/.envrc
+
+**/dist
+**/*.tsbuildinfo
+
+# CDK
+**/cdk.out
+**/cdk.context.json
+
+# local env
+**/.env
+**/.env.local
+**/.env.production
+
+# flyctl launch added from .husky/_/.gitignore
+.husky/_/**/*
+fly.toml
