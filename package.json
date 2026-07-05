@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm --filter @heater-control/web dev",
+    "dev:oidc": "pnpm --filter @heater-control/oidc-proxy dev",
+    "dev:web": "pnpm --filter @heater-control/web dev",
     "lint": "eslint",
     "prepare": "husky",
     "test": "pnpm -r test"

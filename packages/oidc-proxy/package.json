@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "dev": "node --watch --env-file-if-exists=.env --experimental-strip-types src/server.ts",
-    "gen-keys": "node --experimental-strip-types scripts/gen-keys.ts",
+    "dev": "tsx --watch --env-file-if-exists=.env.local src/server.ts",
+    "gen-keys": "tsx scripts/gen-keys.ts",
     "start": "node dist/server.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -20,6 +20,7 @@
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/oidc-provider": "^8.5.2",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^2.1.8"
   }
