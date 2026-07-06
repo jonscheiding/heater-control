@@ -57,6 +57,18 @@ function clearAuthParamsFromUrl(): void {
   }
 }
 
+export async function logout(): Promise<void> {
+  try {
+    await currentAuth?.revoke();
+  } catch {
+    // Best effort — clear local tokens regardless.
+  }
+  localStorage.removeItem(TOKEN_KEY);
+  connectionPromise = null;
+  currentAuth = null;
+  window.location.reload();
+}
+
 export async function haFetch(
   path: string,
   init?: RequestInit,

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Banner } from "./components/Banner.js";
 import { HeaterList } from "./components/HeaterList.js";
-import { connect } from "./ha/connection.js";
+import { connect, logout } from "./ha/connection.js";
 import { getCurrentUser } from "./ha/user.js";
 
 export default function App() {
@@ -59,9 +59,16 @@ export default function App() {
 
   const isLoaded = Object.values(entities).length > 0;
 
+  const logoutInternal =
+    connection == null
+      ? undefined
+      : () => {
+          void logout();
+        };
+
   return (
     <div className="min-h-screen bg-slate-100">
-      <Banner username={user?.name ?? null} />
+      <Banner username={user?.name ?? null} onLogout={logoutInternal} />
       <main className="py-4 sm:py-6">
         <dialog
           className="rounded-lg p-0 backdrop:bg-black/40 m-auto"
