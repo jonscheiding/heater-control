@@ -1,5 +1,4 @@
 import {
-  callService,
   type Connection,
   type HassEntities,
 } from "home-assistant-js-websocket";
@@ -11,6 +10,7 @@ import {
   findPowerSensor,
   getHeaters,
 } from "../heaters/correlate.js";
+import { useToggleHeater } from "../heaters/hooks.js";
 import {
   useCreateSchedule,
   useDeleteSchedule,
@@ -31,6 +31,7 @@ export function HeaterList({ connection, entities, username }: Props) {
   const { data: schedules = [] } = useSchedules(connection);
   const create = useCreateSchedule(connection);
   const del = useDeleteSchedule(connection);
+  const toggle = useToggleHeater(connection);
   const [dialogHeater, setDialogHeater] = useState<{
     entityId: string;
     name: string;
@@ -73,18 +74,26 @@ export function HeaterList({ connection, entities, username }: Props) {
               timer={findAutoOffTimer(h.entity_id, entities)}
               schedules={heaterSchedules}
               now={now}
+              isLoading={
+                (toggle.isPending &&
+                  toggle.variables.entityId === h.entity_id) ||
+                (create.isPending &&
+                  create.variables.targetEntityId === h.entity_id)
+              }
               onToggle={() => {
-                void callService(
-                  connection,
-                  "homeassistant",
-                  isOn ? "turn_off" : "turn_on",
-                  { entity_id: h.entity_id },
-                );
+                toggle.mutate({ entityId: h.entity_id, isOn });
               }}
               onSchedule={() => {
                 setDialogHeater({ entityId: h.entity_id, name });
               }}
               onSchedulePreset={(preset) => {
+                if (
+                  create.isPending &&
+                  create.variables.targetEntityId === h.entity_id
+                ) {
+                  return;
+                }
+
                 let start: Date;
                 switch (preset) {
                   case "1h":
@@ -101,19 +110,12 @@ export function HeaterList({ connection, entities, username }: Props) {
                     preset satisfies never;
                     return;
                 }
-                create.mutate(
-                  {
-                    targetEntityId: h.entity_id,
-                    targetName: name,
-                    createdBy: username,
-                    startIso: start.toISOString(),
-                  },
-                  {
-                    onSuccess: () => {
-                      setDialogHeater(null);
-                    },
-                  },
-                );
+                create.mutate({
+                  targetEntityId: h.entity_id,
+                  targetName: name,
+                  createdBy: username,
+                  startIso: start.toISOString(),
+                });
               }}
               onCancelSchedule={(uid) => {
                 del.mutate(uid);

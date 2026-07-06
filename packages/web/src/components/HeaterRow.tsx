@@ -14,6 +14,7 @@ interface Props {
   timer: HassEntity | undefined;
   schedules: HeaterSchedule[];
   now: number;
+  isLoading: boolean;
   onToggle: () => void;
   onSchedule: () => void;
   onSchedulePreset: (preset: "1h" | "8am") => void;
@@ -27,6 +28,7 @@ export function HeaterRow({
   timer,
   schedules,
   now,
+  isLoading,
   onToggle,
   onSchedule,
   onSchedulePreset,
@@ -58,7 +60,12 @@ export function HeaterRow({
   return (
     <li className="px-4 py-4 sm:px-6">
       <div className="flex items-top gap-4">
-        <PowerButton state={state} label={name} onToggle={onToggle} />
+        <PowerButton
+          state={state}
+          label={name}
+          isLoading={isLoading}
+          onToggle={onToggle}
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-medium text-slate-900">
             {name}

@@ -31,9 +31,9 @@ export function useCreateSchedule(connection: Connection | null) {
     mutationFn: async (input: CreateScheduleInput) => {
       if (!connection) throw new Error("Not connected to Home Assistant");
       await createSchedule(connection, input);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      // Keep the mutation pending until the refetched list is on screen, so
+      // the spinner spans the fetch gap and not just the create call.
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },
   });
 }
@@ -44,9 +44,7 @@ export function useDeleteSchedule(connection: Connection | null) {
     mutationFn: async (uid: string) => {
       if (!connection) throw new Error("Not connected to Home Assistant");
       await deleteSchedule(connection, uid);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },
   });
 }

@@ -4,7 +4,10 @@ type Props = PropsWithChildren<{
   onClick: () => void;
 }>;
 
-export function BasicButton({ children, onClick }: Props) {
+export function BasicButton({
+  children,
+  onClick,
+}: Props & { disabled?: boolean }) {
   return (
     <button
       type="button"
