@@ -8,4 +8,7 @@ export default defineConfig({
     port: 5173,
     allowedHosts: ["strongbow.rainbow-inconnu.ts.net"],
   },
+  build: {
+    sourcemap: true,
+  },
 });
