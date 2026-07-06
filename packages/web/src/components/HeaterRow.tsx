@@ -4,9 +4,9 @@ import { formatRemaining } from "../heaters/format.js";
 import { computeHeaterState, STATUS_LABELS } from "../heaters/state.js";
 import type { HeaterSchedule } from "../schedules/api.js";
 import { formatUpcoming } from "../schedules/format.js";
-import { PowerButton } from "./PowerButton.js";
-import { CalendarButton } from "./CalendarButton.js";
 import { BasicButton } from "./BasicButton.js";
+import { CalendarButton } from "./CalendarButton.js";
+import { PowerButton } from "./PowerButton.js";
 
 interface Props {
   switchEntity: HassEntity;
@@ -51,27 +51,19 @@ export function HeaterRow({
       : undefined;
   const remaining = finishesAt ? formatRemaining(finishesAt, now) : null;
 
-  const wattsDisplay =
-    powerWatts !== null && switchEntity.state === "on"
-      ? `${Math.round(powerWatts)} W`
-      : null;
-
   const sortedSchedules = [...schedules].sort((a, b) =>
     a.startIso.localeCompare(b.startIso),
   );
 
   return (
     <li className="px-4 py-4 sm:px-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-top gap-4">
         <PowerButton state={state} label={name} onToggle={onToggle} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-medium text-slate-900">
             {name}
           </p>
-          <p className="text-sm text-slate-600">
-            {STATUS_LABELS[state]}
-            {wattsDisplay ? ` · ${wattsDisplay}` : ""}
-          </p>
+          <p className="text-sm text-slate-600">{STATUS_LABELS[state]}</p>
           {remaining && <p className="text-sm text-slate-500">{remaining}</p>}
         </div>
         <BasicButton onClick={() => onSchedulePreset("1h")}>1H</BasicButton>

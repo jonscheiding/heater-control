@@ -14,12 +14,14 @@ interface Props {
 }
 
 export function PowerButton({ state, label, onToggle }: Props) {
+  const color = COLOR_CLASSES[state];
+
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-label={`${label}: ${STATUS_LABELS[state]}. Tap to toggle.`}
-      className={`flex h-10 w-10 shrink-0 p-2 items-center justify-center rounded-full text-white shadow-md transition ${COLOR_CLASSES[state]}`}
+      className={`flex h-10 w-10 shrink-0 p-2 items-center justify-center rounded-full text-white shadow-md transition ${color}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

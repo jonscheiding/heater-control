@@ -4,7 +4,7 @@ import {
   type HassEntities,
   type HassUser,
 } from "home-assistant-js-websocket";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Banner } from "./components/Banner.js";
 import { HeaterList } from "./components/HeaterList.js";
@@ -15,7 +15,16 @@ export default function App() {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [entities, setEntities] = useState<HassEntities>({});
   const [user, setUser] = useState<HassUser | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const errorRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (error) {
+      errorRef.current?.showModal();
+    } else {
+      errorRef.current?.close();
+    }
+  }, [error]);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,6 +34,10 @@ export default function App() {
       .then(async (conn) => {
         if (cancelled) return;
         setConnection(conn);
+        conn.addEventListener("disconnected", () => {
+          setError(true);
+          setConnection(null);
+        });
         unsubscribe = subscribeEntities(conn, setEntities);
         try {
           const currentUser = await getCurrentUser(conn);
@@ -33,9 +46,9 @@ export default function App() {
           // Non-fatal — banner just skips the welcome line.
         }
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : String(err));
+        setError(true);
       });
 
     return () => {
@@ -50,11 +63,50 @@ export default function App() {
     <div className="min-h-screen bg-slate-100">
       <Banner username={user?.name ?? null} />
       <main className="py-4 sm:py-6">
-        {error && (
-          <div className="mx-auto max-w-2xl rounded bg-red-50 p-4 text-red-800 sm:rounded-lg">
-            Couldn&rsquo;t connect to Home Assistant: {error}
+        <dialog
+          className="rounded-lg p-0 backdrop:bg-black/40 m-auto"
+          ref={errorRef}
+        >
+          <div
+            className="w-80 max-w-full p-6 text-center text-lg flex flex-col"
+            style={{ gap: "1rem" }}
+          >
+            <h2 className="text-xl">Home Assistant is unavailable.</h2>
+            <svg
+              className="w-30 m-auto"
+              viewBox="0 0 512 512"
+              version="1.1"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <title>disconnected</title>
+              <g
+                id="Page-1"
+                stroke="none"
+                stroke-width="1"
+                fill="none"
+                fill-rule="evenodd"
+              >
+                <g
+                  id="Combined-Shape"
+                  fill="#000000"
+                  transform="translate(44.810770, 44.810773)"
+                >
+                  <path d="M64.9096686,176.449439 L102.621227,214.162133 L127.68601,189.097844 L157.855894,219.267728 L132.791352,244.332258 L178.046186,289.587092 L203.110735,264.522569 L233.280618,294.692452 L208.215604,319.75651 L245.929005,357.468775 L215.759115,387.638664 L200.674175,372.553724 C164.184635,409.043264 107.835262,413.56889 66.4194827,386.130595 L30.1698893,422.378447 L7.10542736e-15,392.208558 L36.2478616,355.958974 C8.809566,314.543194 13.3351883,258.193818 49.8247286,221.704277 L34.7397793,206.619328 L64.9096686,176.449439 Z M44.940846,14.7709487 L407.607513,377.437611 L377.437614,407.607509 L14.770952,44.9408427 L44.940846,14.7709487 Z M79.9946273,251.874176 C55.0010726,276.867731 55.0010726,317.390275 79.9946273,342.383829 C104.095555,366.484757 142.63606,367.345513 167.768387,344.96608 L170.504295,342.383844 L79.9946273,251.874176 Z M392.208558,3.57402996e-12 L422.378447,30.1698893 L375.463932,77.0861461 C402.902226,118.501926 398.376601,174.851298 361.887061,211.340839 L376.972011,226.425789 L346.802123,256.595677 L165.782787,75.5763413 L195.952675,45.4064533 L211.037614,60.491392 C247.527154,24.0018517 303.87653,19.4762293 345.29231,46.914525 L392.208558,3.57402996e-12 Z M243.943406,88.07904 L241.207513,90.6612907 L330.584541,180.038489 C348.320303,153.120457 353.236844,112.180968 331.717166,90.6612907 C307.616238,66.5603629 269.075733,65.6996071 243.943406,88.07904 Z"></path>
+                </g>
+              </g>
+            </svg>
+            <p>The heater hub or its internet connection may be down.</p>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.reload();
+              }}
+              className="rounded bg-slate-800 px-4 py-2 text-white hover:bg-slate-700 disabled:opacity-50"
+            >
+              Reload
+            </button>
           </div>
-        )}
+        </dialog>
         {!error && !connection && (
           <div className="mx-auto max-w-2xl p-4 text-center text-slate-600">
             Connecting&hellip;

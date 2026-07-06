@@ -104,7 +104,7 @@ function DialogBody({
           onChange={(e) => {
             setValue(e.target.value);
           }}
-          className="mt-1 block w-full rounded border border-slate-300 px-3 py-2 text-slate-900"
+          className="mt-1 block w-full rounded border border-slate-300 px-3 py-2 text-slate-900 min-w-0 appearance-none"
         />
       </label>
       <div className="mt-6 flex justify-end gap-2">
