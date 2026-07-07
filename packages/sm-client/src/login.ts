@@ -88,8 +88,8 @@ export async function login(
     return { ok: false, reason: "suspended" };
   }
 
-  const userid = redirect.searchParams.get("USERID");
-  const session = redirect.searchParams.get("SESSION");
+  const userid = getParamCaseInsensitive(redirect.searchParams, "userid");
+  const session = getParamCaseInsensitive(redirect.searchParams, "session");
   if (!userid || !session) {
     throw new ScheduleMasterFlowError(
       `Login redirect lacked userid/session params: ${redirect.toString()}`,
@@ -101,4 +101,16 @@ export async function login(
     session: { userid, session },
     cookies: collectCookies(response),
   };
+}
+
+function getParamCaseInsensitive(
+  searchParams: URLSearchParams,
+  targetKey: string,
+) {
+  for (const key of searchParams.keys()) {
+    if (key.toLowerCase() === targetKey.toLowerCase()) {
+      return searchParams.get(key);
+    }
+  }
+  return null;
 }
