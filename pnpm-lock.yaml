@@ -71,6 +71,9 @@ importers:
       jose:
         specifier: ^5.9.6
         version: 5.10.0
+      nanoid:
+        specifier: ^5.1.16
+        version: 5.1.16
       oidc-provider:
         specifier: ^8.5.1
         version: 8.8.1

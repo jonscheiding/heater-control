@@ -1,4 +1,5 @@
 import { Router, urlencoded, type Request, type Response } from "express";
+import { nanoid } from "nanoid";
 import { type InteractionResults, type Provider } from "oidc-provider";
 
 import { authenticate } from "@heater-control/sm-client";
@@ -91,12 +92,14 @@ export function interactionsRouter(
       let result;
       try {
         result = await authenticate(username, password);
-      } catch {
+      } catch (e) {
+        const id = nanoid();
+        console.error("Authentication error", id, e);
         res
           .status(502)
           .send(
             errorPage(
-              "ScheduleMaster did not respond as expected — the login flow may have changed. Please try again later.",
+              `Communication error with ScheduleMaster. Please share this identifier with Operations: ${id}`,
             ),
           );
         return;
