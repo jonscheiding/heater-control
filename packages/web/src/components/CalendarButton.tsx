@@ -9,6 +9,8 @@
 
 </svg>*/
 
+import styles from "./CalendarButton.module.css";
+
 type Props = {
   onClick?: () => void;
 };
@@ -19,7 +21,7 @@ export function CalendarButton({ onClick }: Props) {
       type="button"
       onClick={onClick}
       aria-label="Choose date/time to turn on"
-      className="flex h-10 w-10 shrink-0 p-2 items-center justify-center rounded-full text-white shadow-md transition bg-taupe-100"
+      className={styles.button}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -29,7 +31,7 @@ export function CalendarButton({ onClick }: Props) {
         strokeWidth={2.5}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-full w-full"
+        className={styles.icon}
       >
         <g id="SVGRepo_bgCarrier" strokeWidth="0" />
         <g

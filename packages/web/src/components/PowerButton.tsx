@@ -1,10 +1,11 @@
 import { STATUS_LABELS, type HeaterState } from "../heaters/state.js";
+import styles from "./PowerButton.module.css";
 
-const COLOR_CLASSES: Record<HeaterState, string> = {
-  off: "bg-red-600 hover:bg-red-500 active:bg-red-700",
-  on: "bg-green-600 hover:bg-green-500 active:bg-green-700",
-  "no-power": "bg-yellow-500 hover:bg-yellow-400 active:bg-yellow-600",
-  waiting: "bg-gray-400 cursor-progress",
+const COLOR_CLASSES: Record<HeaterState, string | undefined> = {
+  off: styles.off,
+  on: styles.on,
+  "no-power": styles.noPower,
+  waiting: styles.waiting,
 };
 
 interface Props {
@@ -20,7 +21,8 @@ export function PowerButton({
   isLoading = false,
   onToggle,
 }: Props) {
-  const color = isLoading ? COLOR_CLASSES.waiting : COLOR_CLASSES[state];
+  const color =
+    (isLoading ? COLOR_CLASSES.waiting : COLOR_CLASSES[state]) ?? "";
 
   return (
     <button
@@ -29,7 +31,7 @@ export function PowerButton({
       disabled={isLoading}
       aria-busy={isLoading}
       aria-label={`${label}: ${STATUS_LABELS[state]}. Tap to toggle.`}
-      className={`flex h-10 w-10 shrink-0 p-2 items-center justify-center rounded-full text-white shadow-md transition ${color}`}
+      className={`${styles.button} ${color}`}
     >
       {isLoading ? (
         <svg
@@ -39,7 +41,7 @@ export function PowerButton({
           stroke="currentColor"
           strokeWidth={2.5}
           strokeLinecap="round"
-          className="h-7 w-7 animate-spin"
+          className={styles.spinner}
           aria-hidden="true"
         >
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -53,7 +55,7 @@ export function PowerButton({
           strokeWidth={2.5}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="h-7 w-7"
+          className={styles.icon}
           aria-hidden="true"
         >
           <path d="M12 2v10" />

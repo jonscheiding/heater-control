@@ -1,0 +1,14 @@
+.base {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  width: 2.5rem;
+  border: none;
+  border-radius: 9999px;
+  box-shadow: var(--shadow-md);
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
