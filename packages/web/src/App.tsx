@@ -6,6 +6,7 @@ import {
 } from "home-assistant-js-websocket";
 import { useEffect, useRef, useState } from "react";
 
+import styles from "./App.module.css";
 import { Banner } from "./components/Banner.js";
 import { HeaterList } from "./components/HeaterList.js";
 import { connect, logout } from "./ha/connection.js";
@@ -67,20 +68,16 @@ export default function App() {
         };
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className={styles.app}>
       <Banner username={user?.name ?? null} onLogout={logoutInternal} />
-      <main className="py-4 sm:py-6">
-        <dialog
-          className="rounded-lg p-0 backdrop:bg-black/40 m-auto"
-          ref={errorRef}
-        >
-          <div
-            className="w-80 max-w-full p-6 text-center text-lg flex flex-col"
-            style={{ gap: "1rem" }}
-          >
-            <h2 className="text-xl">Home Assistant is unavailable.</h2>
+      <main className={styles.main}>
+        <dialog ref={errorRef}>
+          <div className={styles.errorBody}>
+            <h2 className={styles.errorTitle}>
+              Home Assistant is unavailable.
+            </h2>
             <svg
-              className="w-30 m-auto"
+              className={styles.errorIcon}
               viewBox="0 0 512 512"
               version="1.1"
               xmlns="http://www.w3.org/2000/svg"
@@ -108,21 +105,17 @@ export default function App() {
               onClick={() => {
                 window.location.reload();
               }}
-              className="rounded bg-slate-800 px-4 py-2 text-white hover:bg-slate-700 disabled:opacity-50"
+              className={styles.reloadButton}
             >
               Reload
             </button>
           </div>
         </dialog>
         {!error && !connection && (
-          <div className="mx-auto max-w-2xl p-4 text-center text-slate-600">
-            Connecting&hellip;
-          </div>
+          <div className={styles.loading}>Connecting&hellip;</div>
         )}
         {!isLoaded && connection && (
-          <div className="mx-auto max-w-2xl p-4 text-center text-slate-600">
-            Connecting&hellip;
-          </div>
+          <div className={styles.loading}>Connecting&hellip;</div>
         )}
         {isLoaded && connection && (
           <HeaterList

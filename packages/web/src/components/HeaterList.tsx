@@ -16,6 +16,7 @@ import {
   useDeleteSchedule,
   useSchedules,
 } from "../schedules/hooks.js";
+import styles from "./HeaterList.module.css";
 import { HeaterRow } from "./HeaterRow.js";
 import { ScheduleDialog } from "./ScheduleDialog.js";
 
@@ -39,16 +40,10 @@ export function HeaterList({ connection, entities, username }: Props) {
 
   if (heaters.length === 0) {
     return (
-      <div className="mx-auto max-w-2xl p-6 text-center text-slate-600">
+      <div className={styles.empty}>
         No heaters found. Expected entities matching{" "}
-        <code className="rounded bg-slate-200 px-1 py-0.5 text-slate-800">
-          switch.heater_*
-        </code>{" "}
-        or{" "}
-        <code className="rounded bg-slate-200 px-1 py-0.5 text-slate-800">
-          input_boolean.heater_*
-        </code>
-        .
+        <code className={styles.code}>switch.heater_*</code> or{" "}
+        <code className={styles.code}>input_boolean.heater_*</code>.
       </div>
     );
   }
@@ -59,7 +54,7 @@ export function HeaterList({ connection, entities, username }: Props) {
 
   return (
     <>
-      <ul className="mx-auto max-w-2xl divide-y divide-slate-200 bg-white shadow-sm sm:rounded-lg">
+      <ul className={styles.list}>
         {heaters.map((h) => {
           const isOn = h.state === "on";
           const name = h.attributes.friendly_name ?? h.entity_id;

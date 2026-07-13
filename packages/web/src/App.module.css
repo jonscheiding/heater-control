@@ -1,0 +1,58 @@
+.app {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.main {
+  padding-block: 1rem;
+}
+
+.errorBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 20rem;
+  max-width: 100%;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 1.125rem;
+}
+
+.errorTitle {
+  font-size: 1.25rem;
+}
+
+.errorIcon {
+  width: 7.5rem;
+  margin-inline: auto;
+}
+
+.reloadButton {
+  padding: 0.5rem 1rem;
+  color: var(--color-on-dark);
+  background: var(--color-dark);
+  border: none;
+  border-radius: var(--radius);
+}
+
+.reloadButton:hover {
+  background: var(--color-dark-hover);
+}
+
+.reloadButton:disabled {
+  opacity: 0.5;
+}
+
+.loading {
+  margin-inline: auto;
+  max-width: var(--content-max-width);
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 640px) {
+  .main {
+    padding-block: 1.5rem;
+  }
+}

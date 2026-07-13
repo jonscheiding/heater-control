@@ -1,5 +1,7 @@
 import type { PropsWithChildren } from "react";
 
+import styles from "./BasicButton.module.css";
+
 type Props = PropsWithChildren<{
   onClick: () => void;
 }>;
@@ -9,11 +11,7 @@ export function BasicButton({
   onClick,
 }: Props & { disabled?: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-10 w-10 shrink-0 p-4 items-center justify-center rounded-full text-black text-xs bg-taupe-100 shadow-md transition"
-    >
+    <button type="button" onClick={onClick} className={styles.button}>
       {children}
     </button>
   );

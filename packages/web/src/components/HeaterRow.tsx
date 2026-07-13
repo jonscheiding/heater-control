@@ -6,6 +6,7 @@ import type { HeaterSchedule } from "../schedules/api.js";
 import { formatUpcoming } from "../schedules/format.js";
 import { BasicButton } from "./BasicButton.js";
 import { CalendarButton } from "./CalendarButton.js";
+import styles from "./HeaterRow.module.css";
 import { PowerButton } from "./PowerButton.js";
 
 interface Props {
@@ -58,33 +59,28 @@ export function HeaterRow({
   );
 
   return (
-    <li className="px-4 py-4 sm:px-6">
-      <div className="flex items-top gap-4">
+    <li className={styles.row}>
+      <div className={styles.main}>
         <PowerButton
           state={state}
           label={name}
           isLoading={isLoading}
           onToggle={onToggle}
         />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-medium text-slate-900">
-            {name}
-          </p>
-          <p className="text-sm text-slate-600">{STATUS_LABELS[state]}</p>
-          {remaining && <p className="text-sm text-slate-500">{remaining}</p>}
+        <div className={styles.info}>
+          <p className={styles.name}>{name}</p>
+          <p className={styles.status}>{STATUS_LABELS[state]}</p>
+          {remaining && <p className={styles.remaining}>{remaining}</p>}
         </div>
         <BasicButton onClick={() => onSchedulePreset("1h")}>1H</BasicButton>
         <BasicButton onClick={() => onSchedulePreset("8am")}>8AM</BasicButton>
         <CalendarButton onClick={onSchedule} />
       </div>
       {sortedSchedules.length > 0 && (
-        <ul className="mt-3 space-y-1 border-t border-slate-100 pt-3">
+        <ul className={styles.schedules}>
           {sortedSchedules.map((s) => (
-            <li
-              key={s.uid}
-              className="flex items-center justify-between gap-2 text-sm text-slate-600"
-            >
-              <span className="min-w-0 truncate">
+            <li key={s.uid} className={styles.scheduleItem}>
+              <span className={styles.scheduleText}>
                 Scheduled {formatUpcoming(s.startIso, now)}
                 {s.createdBy ? ` · by ${s.createdBy}` : ""}
               </span>
@@ -94,7 +90,7 @@ export function HeaterRow({
                   onCancelSchedule(s.uid);
                 }}
                 disabled={cancellingUid === s.uid}
-                className="shrink-0 rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50"
+                className={styles.cancel}
                 aria-label={`Cancel schedule ${formatUpcoming(s.startIso, now)}`}
               >
                 Cancel
