@@ -35,7 +35,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).send(errorPage("Something went wrong. Please try again."));
 });
 
-app.listen(config.port, () => {
+app.listen(config.port, "0.0.0.0", () => {
   console.log(
     `oidc-proxy listening on :${config.port} (issuer ${config.issuer})`,
   );

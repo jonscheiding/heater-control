@@ -24,6 +24,7 @@ async function testConfig(): Promise<ProxyConfig> {
       tokenAuthMethod: "client_secret_basic",
     },
     accountTtlSeconds: 600,
+    insecureCookies: false,
   };
 }
 

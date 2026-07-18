@@ -1,0 +1,58 @@
+name: heater-control-ha
+
+# Local HA dev stack — a SINGLE self-provisioning service. The OIDC proxy runs
+# on the HOST (so it's debuggable):
+#
+#   # one-time: let the browser resolve the proxy the way HA does
+#   echo "127.0.0.1 oidc-proxy.test" | sudo tee -a /etc/hosts
+#
+#   # terminal A — the proxy, on the host (hot reload / debugger):
+#   pnpm --filter @heater-control/oidc-proxy dev
+#
+#   # terminal B — Home Assistant:
+#   cd ha-dev && docker compose up --build
+#   open http://localhost:8123    # sign in dev/dev, or "ScheduleMaster (dev)"
+#
+# HA reaches the host proxy via extra_hosts (host-gateway) at the same name the
+# browser uses, so the OIDC issuer is identical on both sides.
+
+services:
+  homeassistant:
+    build:
+      context: ..
+      dockerfile: ha-dev/Dockerfile
+    image: heater-control-ha:dev
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+    extra_hosts:
+      - "oidc-proxy.test:host-gateway"
+    environment:
+      - TZ=America/Chicago
+      - HC_AUTO_SETUP=1
+      - OIDC_DISCOVERY_URL=http://oidc-proxy.test:3000/.well-known/openid-configuration
+      - OIDC_CLIENT_ID=home-assistant
+      - OIDC_CLIENT_SECRET=dev-ha-secret
+      - OIDC_DISPLAY_NAME=ScheduleMaster (dev)
+      - OIDC_FORCE_HTTPS=false
+      - HA_CORS_ORIGINS=http://localhost:5173,http://localhost:4173
+    healthcheck:
+      # /manifest.json is a static 200 whether or not HA is onboarded.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8123/manifest.json')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    volumes:
+      # Runtime state (DB, logs, .storage, provisioned components, rendered
+      # includes) — gitignored. Source dirs are bind-mounted read-only for live
+      # editing; configuration.yaml is baked and copied in by the entrypoint.
+      - ./.dev/config:/config
+      - ../homeassistant/packages:/config/packages:ro
+      - ../homeassistant/blueprints/automation/heater_control:/config/blueprints/automation/heater_control:ro

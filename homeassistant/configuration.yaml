@@ -1,0 +1,18 @@
+# Home Assistant reference configuration for the heater-control stack.
+#
+# Environment-specific settings (OIDC issuer, CORS, trusted proxies) are NOT
+# hardcoded here — they are rendered at container start into http.yaml and
+# auth_oidc.yaml from environment variables (see ha-dev/render_config.py), so the
+# same config serves local dev (host proxy over http) and the Fly demo (proxy
+# over https). On a plain HAOS box, create those two files by hand.
+
+default_config:
+
+http: !include http.yaml
+
+# Per-heater packages: each bundles its input_boolean/timer/auto-off automation.
+homeassistant:
+  packages: !include_dir_named packages
+
+# OIDC login (auth_oidc) — adds an SSO option to HA's login screen.
+auth_oidc: !include auth_oidc.yaml

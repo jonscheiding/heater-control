@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 
 import { includeIgnoreFile } from "@eslint/compat";
 import js from "@eslint/js";
-import { defineConfig } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import * as pluginImportResolverTypescript from "eslint-import-resolver-typescript";
 import pluginImport from "eslint-plugin-import";
 import pluginReact from "eslint-plugin-react";
@@ -15,6 +15,7 @@ export default defineConfig([
     fileURLToPath(new URL(".gitignore", import.meta.url)),
     ".gitignore files",
   ),
+  globalIgnores(["ha-dev/.dev/**/*"]),
   {
     files: ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"],
     plugins: { js },
