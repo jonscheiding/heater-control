@@ -14,6 +14,8 @@ export interface ProxyConfig {
   };
   /** How long scraped claims live in the account store (seconds). */
   accountTtlSeconds: number;
+  /** Allow non-Secure cookies so the flow works over plain HTTP (local dev only). */
+  insecureCookies: boolean;
 }
 
 function required(name: string): string {
@@ -64,5 +66,6 @@ export function loadConfig(): ProxyConfig {
         process.env["HA_TOKEN_AUTH_METHOD"] ?? "client_secret_basic",
     },
     accountTtlSeconds: Number(process.env["ACCOUNT_TTL_SECONDS"] ?? "600"),
+    insecureCookies: process.env["OIDC_INSECURE_COOKIES"] === "true",
   };
 }

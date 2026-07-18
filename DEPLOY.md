@@ -17,6 +17,14 @@ Auth chain: upstream OIDC issuer (Google for testing, the ScheduleMaster proxy f
 
 ## 1. Home Assistant setup
 
+> **Containerized dev + demo:** the fastest path is the self-provisioning image
+> in [`ha-dev/`](ha-dev/) — `cd ha-dev && docker compose up --build` for local dev
+> (with the OIDC proxy running on the host), or `fly deploy -c ha-dev/fly.toml`
+> for a scale-to-zero, volume-less Fly demo. It bakes the `homeassistant/`
+> reference config + `auth_oidc` (patched) and self-onboards. See
+> [`ha-dev/README.md`](ha-dev/README.md). The steps below describe the manual /
+> HAOS path.
+
 ### 1a. Start HA in Docker (skip if already running)
 
 Standard `homeassistant/home-assistant` image. Volume-mount a config directory so settings persist across container restarts.

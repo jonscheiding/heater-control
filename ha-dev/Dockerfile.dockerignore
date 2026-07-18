@@ -1,0 +1,12 @@
+# Applied to the repo-root build context for ha-dev/Dockerfile. BuildKit reads
+# <dockerfile>.dockerignore in preference to the context-root .dockerignore, so
+# this keeps node_modules/runtime-state out of the (root) context. The Dockerfile
+# also uses only targeted COPYs, so nothing here can leak into the image anyway.
+**/node_modules
+**/dist
+**/.dev/
+**/.env
+**/.env.local
+**/.env.production
+**/*.tsbuildinfo
+.git

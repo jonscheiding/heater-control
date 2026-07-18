@@ -35,7 +35,15 @@ export function createProvider(
       email: ["email"],
     },
     jwks: config.jwks,
-    cookies: { keys: config.cookieKeys },
+    cookies: {
+      keys: config.cookieKeys,
+      // Over plain HTTP (local dev only) the browser drops Secure cookies, which
+      // breaks the interaction session. Allow insecure cookies when explicitly
+      // opted in; production runs over HTTPS and leaves this off.
+      ...(config.insecureCookies
+        ? { long: { secure: false }, short: { secure: false } }
+        : {}),
+    },
     // HA is a confidential client (has a secret); PKCE is optional.
     pkce: { required: () => false },
     features: {

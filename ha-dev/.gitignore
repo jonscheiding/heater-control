@@ -1,0 +1,3 @@
+# Local dev runtime state (HA DB, logs, .storage, provisioned custom_components,
+# rendered config includes). Everything the container writes lives here.
+.dev/
