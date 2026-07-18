@@ -4,10 +4,10 @@ import { formatRemaining } from "../heaters/format.js";
 import { computeHeaterState, STATUS_LABELS } from "../heaters/state.js";
 import type { HeaterSchedule } from "../schedules/api.js";
 import { formatUpcoming } from "../schedules/format.js";
-import { BasicButton } from "./BasicButton.js";
 import { CalendarButton } from "./CalendarButton.js";
 import styles from "./HeaterRow.module.css";
 import { PowerButton } from "./PowerButton.js";
+import { Button } from "./ui/Button.js";
 
 interface Props {
   switchEntity: HassEntity;
@@ -72,8 +72,12 @@ export function HeaterRow({
           <p className={styles.status}>{STATUS_LABELS[state]}</p>
           {remaining && <p className={styles.remaining}>{remaining}</p>}
         </div>
-        <BasicButton onClick={() => onSchedulePreset("1h")}>1H</BasicButton>
-        <BasicButton onClick={() => onSchedulePreset("8am")}>8AM</BasicButton>
+        <Button round onClick={() => onSchedulePreset("1h")}>
+          1H
+        </Button>
+        <Button round onClick={() => onSchedulePreset("8am")}>
+          8AM
+        </Button>
         <CalendarButton onClick={onSchedule} />
       </div>
       {sortedSchedules.length > 0 && (
@@ -84,17 +88,15 @@ export function HeaterRow({
                 Scheduled {formatUpcoming(s.startIso, now)}
                 {s.createdBy ? ` · by ${s.createdBy}` : ""}
               </span>
-              <button
-                type="button"
+              <Button
                 onClick={() => {
                   onCancelSchedule(s.uid);
                 }}
                 disabled={cancellingUid === s.uid}
-                className={styles.cancel}
                 aria-label={`Cancel schedule ${formatUpcoming(s.startIso, now)}`}
               >
                 Cancel
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

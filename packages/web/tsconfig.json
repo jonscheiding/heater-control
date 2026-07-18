@@ -4,7 +4,8 @@
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
-    "noEmit": true
+    "noEmit": true,
+    "plugins": [{ "name": "typescript-plugin-css-modules" }]
   },
   "include": ["src/**/*", "vite.config.ts"]
 }

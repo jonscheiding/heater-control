@@ -7,5 +7,7 @@
         "cmd": "~/.nvm/nvm-exec pnpm sort-package-json ${file} && echo ${file} formatted"
       }
     ]
-  }
+  },
+  "js/ts.experimental.useTsgo": false,
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }

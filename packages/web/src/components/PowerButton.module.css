@@ -1,51 +1,37 @@
-.button {
-  composes: base from "./roundButton.module.css";
-  padding: 0.5rem;
-  color: #fff;
-}
-
 .off {
+  color: var(--color-text-invert);
   background: var(--color-off);
-}
-.off:hover {
-  background: var(--color-off-hover);
-}
-.off:active {
-  background: var(--color-off-active);
+  &:hover {
+    background: var(--color-off-hover);
+  }
+  &:active {
+    background: var(--color-off-active);
+  }
 }
 
 .on {
+  color: var(--color-text-invert);
   background: var(--color-on);
-}
-.on:hover {
-  background: var(--color-on-hover);
-}
-.on:active {
-  background: var(--color-on-active);
+  &:hover {
+    background: var(--color-on-hover);
+  }
+  &:active {
+    background: var(--color-on-active);
+  }
 }
 
 .noPower {
+  color: var(--color-text-invert);
   background: var(--color-warn);
-}
-.noPower:hover {
-  background: var(--color-warn-hover);
-}
-.noPower:active {
-  background: var(--color-warn-active);
+  &:hover {
+    background: var(--color-warn-hover);
+  }
+  &:active {
+    background: var(--color-warn-active);
+  }
 }
 
 .waiting {
   background: var(--color-waiting);
   cursor: progress;
-}
-
-.icon {
-  height: 1.75rem;
-  width: 1.75rem;
-}
-
-.spinner {
-  height: 1.75rem;
-  width: 1.75rem;
-  animation: spin 1s linear infinite;
 }
