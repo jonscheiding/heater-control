@@ -1,4 +1,6 @@
 import styles from "./Banner.module.css";
+import { Button } from "./ui/Button.js";
+import { Header } from "./ui/Header.js";
 
 interface Props {
   username: string | null;
@@ -7,18 +9,16 @@ interface Props {
 
 export function Banner({ username, onLogout }: Props) {
   return (
-    <header className={styles.banner}>
-      <div className={styles.row}>
-        <div>
-          <h1 className={styles.title}>Flying Neutrons Airplane Heaters</h1>
-          {username && <p className={styles.welcome}>Welcome, {username}</p>}
-        </div>
-        {onLogout && (
-          <button type="button" onClick={onLogout} className={styles.logout}>
-            Log out
-          </button>
-        )}
+    <Header>
+      <div>
+        <h1 className={styles.title}>Flying Neutrons Airplane Heaters</h1>
+        {username && <p className={styles.welcome}>Welcome, {username}</p>}
       </div>
-    </header>
+      {onLogout && (
+        <Button className={styles.logout} onClick={() => onLogout()}>
+          Log out
+        </Button>
+      )}
+    </Header>
   );
 }

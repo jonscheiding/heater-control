@@ -1,0 +1,24 @@
+.header {
+  padding: 1rem;
+  color: var(--color-on-dark);
+  background: var(--color-dark);
+  box-shadow: var(--shadow);
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--content-max-width);
+  margin: auto;
+}
+
+@media (min-width: 640px) {
+  .header {
+    padding-inline: 1.5rem;
+  }
+  .title {
+    font-size: 1.25rem;
+  }
+}
