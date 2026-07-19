@@ -5,7 +5,7 @@ import {
 } from "oidc-provider";
 
 import type { AccountStore } from "./account-store.js";
-import type { ProxyConfig } from "./config.js";
+import type { ProxyEnvironmentConfig } from "./config.js";
 
 /**
  * Build the OIDC provider Home Assistant's `auth_oidc` integration talks to.
@@ -13,17 +13,17 @@ import type { ProxyConfig } from "./config.js";
  * store populated during the ScheduleMaster login interaction.
  */
 export function createProvider(
-  config: ProxyConfig,
+  config: ProxyEnvironmentConfig,
   accounts: AccountStore,
 ): Provider {
   const haClient: ClientMetadata = {
-    client_id: config.ha.clientId,
-    client_secret: config.ha.clientSecret,
-    redirect_uris: config.ha.redirectUris,
+    client_id: config.HA_CLIENT_ID,
+    client_secret: config.HA_CLIENT_SECRET,
+    redirect_uris: config.HA_REDIRECT_URIS,
     grant_types: ["authorization_code", "refresh_token"],
     response_types: ["code"],
-    token_endpoint_auth_method: config.ha
-      .tokenAuthMethod as ClientMetadata["token_endpoint_auth_method"],
+    token_endpoint_auth_method:
+      config.HA_TOKEN_AUTH_METHOD as ClientMetadata["token_endpoint_auth_method"],
   };
 
   const configuration: Configuration = {
@@ -34,13 +34,13 @@ export function createProvider(
       profile: ["name", "given_name", "family_name", "preferred_username"],
       email: ["email"],
     },
-    jwks: config.jwks,
+    jwks: config.OIDC_JWKS,
     cookies: {
-      keys: config.cookieKeys,
+      keys: config.OIDC_COOKIE_KEYS,
       // Over plain HTTP (local dev only) the browser drops Secure cookies, which
       // breaks the interaction session. Allow insecure cookies when explicitly
       // opted in; production runs over HTTPS and leaves this off.
-      ...(config.insecureCookies
+      ...(config.OIDC_INSECURE_COOKIES
         ? { long: { secure: false }, short: { secure: false } }
         : {}),
     },
@@ -66,5 +66,5 @@ export function createProvider(
     },
   };
 
-  return new Provider(config.issuer, configuration);
+  return new Provider(config.OIDC_ISSUER, configuration);
 }

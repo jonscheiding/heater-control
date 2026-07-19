@@ -68,6 +68,9 @@ importers:
       '@heater-control/sm-client':
         specifier: workspace:*
         version: link:../sm-client
+      envalid:
+        specifier: ^8.2.0
+        version: 8.2.0
       express:
         specifier: ^5.1.0
         version: 5.2.1
@@ -80,6 +83,9 @@ importers:
       oidc-provider:
         specifier: ^8.5.1
         version: 8.8.1
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/express':
         specifier: ^5.0.0
@@ -1618,6 +1624,10 @@ packages:
   entities@7.0.1:
     resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
     engines: {node: '>=0.12'}
+
+  envalid@8.2.0:
+    resolution: {integrity: sha512-CkPvea95dwMYE1wnKX5mQXkOpiMs9O+ncv8NqZy+gW7FuzpUp06KTdUHb18xFG8CqQHmfmRqGLF5DuGaBWNrSw==}
+    engines: {node: '>=18'}
 
   environment@1.1.0:
     resolution: {integrity: sha512-xUtoPkMggbz0MPyPiIWr1Kp4aeWJjDZ6SMvURhimjdZgsRuDplF5/s9hcgGhyXMhs+6vpnuoiZ2kFiu3FMnS8Q==}
@@ -4645,6 +4655,10 @@ snapshots:
 
   entities@7.0.1: {}
 
+  envalid@8.2.0:
+    dependencies:
+      tslib: 2.8.1
+
   environment@1.1.0: {}
 
   errno@0.1.8:
@@ -6361,8 +6375,7 @@ snapshots:
       minimist: 1.2.8
       strip-bom: 3.0.0
 
-  tslib@2.8.1:
-    optional: true
+  tslib@2.8.1: {}
 
   tsscmp@1.0.6: {}
 
