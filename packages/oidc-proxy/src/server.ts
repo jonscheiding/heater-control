@@ -11,7 +11,7 @@ import { createProvider } from "./provider.js";
 import { errorPage } from "./views.js";
 
 const config = loadConfig();
-const accounts = new AccountStore(config.accountTtlSeconds);
+const accounts = new AccountStore(config.ACCOUNT_TTL_SECONDS);
 const provider = createProvider(config, accounts);
 // Trust the reverse proxy / platform TLS terminator so the issuer stays https.
 provider.proxy = true;
@@ -35,8 +35,8 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).send(errorPage("Something went wrong. Please try again."));
 });
 
-app.listen(config.port, "0.0.0.0", () => {
+app.listen(config.PORT, "0.0.0.0", () => {
   console.log(
-    `oidc-proxy listening on :${config.port} (issuer ${config.issuer})`,
+    `oidc-proxy listening on :${config.PORT} (issuer ${config.OIDC_ISSUER})`,
   );
 });

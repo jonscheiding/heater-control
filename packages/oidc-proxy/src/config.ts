@@ -1,71 +1,68 @@
+import {
+  cleanEnv,
+  num,
+  str,
+  makeValidator,
+  type ValidatorSpec,
+  json,
+  bool,
+} from "envalid";
 import type { JWK } from "jose";
+import { z } from "zod";
 
-/** Parsed, validated runtime configuration for the proxy. */
-export interface ProxyConfig {
-  issuer: string;
-  port: number;
-  jwks: { keys: JWK[] };
-  cookieKeys: string[];
-  ha: {
-    clientId: string;
-    clientSecret: string;
-    redirectUris: string[];
-    tokenAuthMethod: string;
-  };
-  /** How long scraped claims live in the account store (seconds). */
-  accountTtlSeconds: number;
-  /** Allow non-Secure cookies so the flow works over plain HTTP (local dev only). */
-  insecureCookies: boolean;
-}
+const zod = <T>(schema: z.Schema<T>) =>
+  makeValidator((value) => schema.parse(json()._parse(value)))();
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
+const list = <T>(inner: ValidatorSpec<T>) =>
+  makeValidator((values) =>
+    values.split(",").map((value) => inner._parse(value)),
+  )();
 
-function list(name: string): string[] {
-  return required(name)
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+const jwkSchema = z
+  .object({
+    kty: z.string(),
+    // JWKs have a bunch of optional parameters
+    // don't feel like enumerating them here
+  })
+  .loose()
+  .transform((data) => data as JWK);
 
-function parseJwks(raw: string): { keys: JWK[] } {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("OIDC_JWKS must be valid JSON (a JWKS object or a JWK).");
-  }
-  // Accept either a full { keys: [...] } JWKS or a single JWK.
-  const keys =
-    parsed && typeof parsed === "object" && "keys" in parsed
-      ? (parsed as { keys: JWK[] }).keys
-      : [parsed as JWK];
-  if (!Array.isArray(keys) || keys.length === 0) {
-    throw new Error("OIDC_JWKS did not contain any keys.");
-  }
-  return { keys };
+const jwksSchema = z.union([
+  jwkSchema.transform((data) => ({ keys: [data] })),
+  z.object({ keys: z.array(jwkSchema) }),
+]);
+
+export interface ProxyEnvironmentConfig {
+  PORT: number;
+
+  OIDC_ISSUER: string;
+  OIDC_JWKS: { keys: JWK[] };
+  OIDC_COOKIE_KEYS: string[];
+  OIDC_INSECURE_COOKIES: boolean;
+
+  HA_CLIENT_ID: string;
+  HA_CLIENT_SECRET: string;
+  HA_REDIRECT_URIS: string[];
+  HA_TOKEN_AUTH_METHOD: string;
+
+  ACCOUNT_TTL_SECONDS: number;
 }
 
 /** Read and validate configuration from the environment. Throws on any gap. */
-export function loadConfig(): ProxyConfig {
-  return {
-    issuer: required("OIDC_ISSUER"),
-    port: Number(process.env["PORT"] ?? "3000"),
-    jwks: parseJwks(required("OIDC_JWKS")),
-    cookieKeys: list("OIDC_COOKIE_KEYS"),
-    ha: {
-      clientId: required("HA_CLIENT_ID"),
-      clientSecret: required("HA_CLIENT_SECRET"),
-      redirectUris: list("HA_REDIRECT_URIS"),
-      tokenAuthMethod:
-        process.env["HA_TOKEN_AUTH_METHOD"] ?? "client_secret_basic",
-    },
-    accountTtlSeconds: Number(process.env["ACCOUNT_TTL_SECONDS"] ?? "600"),
-    insecureCookies: process.env["OIDC_INSECURE_COOKIES"] === "true",
-  };
+export function loadConfig(): ProxyEnvironmentConfig {
+  return cleanEnv(process.env, {
+    PORT: num({ default: 3000 }),
+
+    OIDC_ISSUER: str(),
+    OIDC_JWKS: zod(jwksSchema),
+    OIDC_COOKIE_KEYS: list(str()),
+    OIDC_INSECURE_COOKIES: bool({ default: false }),
+
+    HA_CLIENT_ID: str(),
+    HA_CLIENT_SECRET: str(),
+    HA_REDIRECT_URIS: list(str()),
+    HA_TOKEN_AUTH_METHOD: str({ default: "client_secret_basic" }),
+
+    ACCOUNT_TTL_SECONDS: num({ default: 600 }),
+  });
 }
