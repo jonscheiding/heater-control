@@ -5,6 +5,7 @@ import {
   type HassUser,
 } from "home-assistant-js-websocket";
 import { useEffect, useRef, useState } from "react";
+import { ToastContainer } from "react-toastify";
 
 import styles from "./App.module.css";
 import { Banner } from "./components/Banner.js";
@@ -125,6 +126,7 @@ export default function App() {
           />
         )}
       </main>
+      <ToastContainer position="top-center" />
     </div>
   );
 }
