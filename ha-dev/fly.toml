@@ -1,49 +1,43 @@
-# Fly.io config for the Home Assistant DEMO instance: scale-to-zero, volume-less,
-# self-onboarding. Deploy from the REPO ROOT so the build context is the root:
-#   fly deploy -c ha-dev/fly.toml
+# fly.toml app configuration file generated for heater-control-ha-dev on 2026-07-20T21:14:34Z
 #
-# HAOS remains the eventual real deployment; this is a low-cost hosted demo, so
-# /config is ephemeral and the container re-provisions + re-onboards on a cold
-# boot (see ha-dev/docker-entrypoint.sh). Secrets are set out-of-band:
-#   fly secrets set OIDC_CLIENT_SECRET=... HA_ONBOARD_PASSWORD=...
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = 'heater-control-ha'
+app = 'heater-control-ha-dev'
 primary_region = 'ord'
 
 [build]
   dockerfile = 'ha-dev/Dockerfile'
 
+[env]
+  HA_CORS_ORIGINS = 'http://localhost:5173'
+  HA_TRUSTED_PROXIES = '127.0.0.1/32,::1,172.16.0.0/12,fdaa::/16'
+  HA_USE_X_FORWARDED_FOR = 'true'
+  HC_AUTO_SETUP = '1'
+  HC_STAGE_CONFIG = '1'
+  OIDC_CLIENT_ID = 'home-assistant'
+  OIDC_DISCOVERY_URL = 'https://sm-oidc-proxy.fly.dev/.well-known/openid-configuration'
+  OIDC_DISPLAY_NAME = 'ScheduleMaster'
+  OIDC_FORCE_HTTPS = 'true'
+  TZ = 'America/Chicago'
+
 [http_service]
   internal_port = 8123
   force_https = true
-  auto_stop_machines = 'suspend'   # snapshot RAM on idle → fast resume, state kept
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
-  min_machines_running = 0         # scale to zero when idle (cost)
+  min_machines_running = 0
   processes = ['app']
 
   [[http_service.checks]]
-    method = 'GET'
-    path = '/manifest.json'
     interval = '15s'
     timeout = '5s'
-    grace_period = '120s'          # HA cold boot is slow
-
-[env]
-  TZ = 'America/Chicago'
-  HC_STAGE_CONFIG = '1'            # volume-less: stage packages/blueprints on boot
-  HC_AUTO_SETUP = '1'             # self-onboard + create local calendar on boot
-  OIDC_DISCOVERY_URL = 'https://sm-oidc-proxy.fly.dev/.well-known/openid-configuration'
-  OIDC_CLIENT_ID = 'home-assistant'
-  OIDC_DISPLAY_NAME = 'ScheduleMaster'
-  OIDC_FORCE_HTTPS = 'true'
-  HA_USE_X_FORWARDED_FOR = 'true'
-  # Start broad-but-private, then pin to the address in HA's "untrusted proxy"
-  # startup warning (see fly logs). Avoid 0.0.0.0/0.
-  HA_TRUSTED_PROXIES = '127.0.0.1/32,::1,172.16.0.0/12,fdaa::/16'
-  # The SPA origin(s) that call this HA. Add your Netlify/prod SPA domain here.
-  HA_CORS_ORIGINS = 'http://localhost:5173'
+    grace_period = '2m0s'
+    method = 'GET'
+    path = '/manifest.json'
 
 [[vm]]
-  memory = '1gb'                   # bump if HA/recorder OOMs
+  memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 1024
