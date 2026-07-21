@@ -1,0 +1,44 @@
+name: ScheduleMaster regression
+
+# Live smoke tests that hit the real my.schedulemaster.com to catch login-flow
+# drift. Run weekly (and on demand) rather than on push so we don't hammer the
+# upstream site or block PRs on an external dependency.
+on:
+  schedule:
+    # Mondays at 08:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Fail loudly if the credentials are missing — the smoke suite silently
+      # skips without them, which would otherwise look like a passing run.
+      - name: Verify credentials are configured
+        env:
+          SM_TEST_USERNAME: ${{ secrets.SM_TEST_USERNAME }}
+          SM_TEST_PASSWORD: ${{ secrets.SM_TEST_PASSWORD }}
+        run: |
+          if [ -z "$SM_TEST_USERNAME" ] || [ -z "$SM_TEST_PASSWORD" ]; then
+            echo "::error::SM_TEST_USERNAME / SM_TEST_PASSWORD secrets are not set; smoke tests would be skipped."
+            exit 1
+          fi
+
+      - name: Run ScheduleMaster smoke tests
+        env:
+          SM_TEST_USERNAME: ${{ secrets.SM_TEST_USERNAME }}
+          SM_TEST_PASSWORD: ${{ secrets.SM_TEST_PASSWORD }}
+          SM_TEST_EMAIL: ${{ secrets.SM_TEST_EMAIL }}
+        run: pnpm --filter @heater-control/sm-client test:smoke

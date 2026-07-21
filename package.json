@@ -9,6 +9,7 @@
     "dev:ha": "docker compose -f ha-dev/docker-compose.yml up",
     "dev:oidc": "pnpm --filter @heater-control/oidc-proxy dev",
     "dev:web": "pnpm --filter @heater-control/web dev",
+    "format": "pnpm prettier -c .",
     "lint": "eslint",
     "prepare": "husky",
     "test": "pnpm -r test"
