@@ -51,7 +51,7 @@ export interface ProxyEnvironmentConfig {
 /** Read and validate configuration from the environment. Throws on any gap. */
 export function loadConfig(): ProxyEnvironmentConfig {
   return cleanEnv(process.env, {
-    PORT: num({ default: 3000 }),
+    PORT: num({ default: 3300 }),
 
     OIDC_ISSUER: str(),
     OIDC_JWKS: zod(jwksSchema),

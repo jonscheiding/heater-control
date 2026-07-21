@@ -13,7 +13,7 @@ async function testConfig(): Promise<ProxyEnvironmentConfig> {
   jwk.kid = await calculateJwkThumbprint(jwk);
 
   return {
-    PORT: 3000,
+    PORT: 3300,
 
     OIDC_ISSUER: "https://sm-oidc.example.com",
     OIDC_JWKS: { keys: [jwk] },
