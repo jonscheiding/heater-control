@@ -1,63 +1,23 @@
-import {
-  subscribeEntities,
-  type Connection,
-  type HassEntities,
-  type HassUser,
-} from "home-assistant-js-websocket";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { ToastContainer } from "react-toastify";
 
 import styles from "./App.module.css";
 import { Banner } from "./components/Banner.js";
 import { HeaterList } from "./components/HeaterList.js";
-import { connect, logout } from "./ha/connection.js";
-import { getCurrentUser } from "./ha/user.js";
+import { logout } from "./ha/connection.js";
+import { useConnection } from "./ha/hooks.js";
 
 export default function App() {
-  const [connection, setConnection] = useState<Connection | null>(null);
-  const [entities, setEntities] = useState<HassEntities>({});
-  const [user, setUser] = useState<HassUser | null>(null);
-  const [error, setError] = useState(false);
+  const { connection, entities, user, status } = useConnection();
   const errorRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    if (error) {
+    if (status === "error" || status === "reconnecting") {
       errorRef.current?.showModal();
     } else {
       errorRef.current?.close();
     }
-  }, [error]);
-
-  useEffect(() => {
-    let cancelled = false;
-    let unsubscribe: (() => void) | undefined;
-
-    connect()
-      .then(async (conn) => {
-        if (cancelled) return;
-        setConnection(conn);
-        conn.addEventListener("disconnected", () => {
-          setError(true);
-          setConnection(null);
-        });
-        unsubscribe = subscribeEntities(conn, setEntities);
-        try {
-          const currentUser = await getCurrentUser(conn);
-          if (!cancelled) setUser(currentUser);
-        } catch {
-          // Non-fatal — banner just skips the welcome line.
-        }
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setError(true);
-      });
-
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-    };
-  }, []);
+  }, [status]);
 
   const isLoaded = Object.values(entities).length > 0;
 
@@ -112,7 +72,7 @@ export default function App() {
             </button>
           </div>
         </dialog>
-        {!error && !connection && (
+        {status !== "error" && !connection && (
           <div className={styles.loading}>Connecting&hellip;</div>
         )}
         {!isLoaded && connection && (

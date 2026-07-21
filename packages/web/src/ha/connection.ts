@@ -69,6 +69,18 @@ export async function logout(): Promise<void> {
   window.location.reload();
 }
 
+/**
+ * The stored tokens are invalid (e.g. HA was restarted in dev, or the refresh
+ * token was revoked). Drop them and reload so `connect()` starts a fresh OAuth
+ * flow. Unlike `logout`, we skip revoke — the tokens are already dead.
+ */
+export function reauthenticate(): void {
+  localStorage.removeItem(TOKEN_KEY);
+  connectionPromise = null;
+  currentAuth = null;
+  window.location.reload();
+}
+
 export async function haFetch(
   path: string,
   init?: RequestInit,
@@ -82,11 +94,16 @@ export async function haFetch(
       // fall through; fetch will 401 if the token is truly bad
     }
   }
-  return await fetch(`${import.meta.env.VITE_HA_URL}${path}`, {
+  const response = await fetch(`${import.meta.env.VITE_HA_URL}${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${auth.accessToken}`,
       ...init?.headers,
     },
   });
+  if (response.status === 401) {
+    // Token was rejected despite our refresh attempt — force a re-login.
+    reauthenticate();
+  }
+  return response;
 }
