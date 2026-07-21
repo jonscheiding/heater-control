@@ -30,12 +30,15 @@ services:
     environment:
       - TZ=America/Chicago
       - HC_AUTO_SETUP=1
-      - OIDC_DISCOVERY_URL=http://oidc-proxy.test:3000/.well-known/openid-configuration
+      - OIDC_DISCOVERY_URL=${OIDC_DISCOVERY_URL:-http://oidc-proxy.test:3000/.well-known/openid-configuration}
       - OIDC_CLIENT_ID=home-assistant
-      - OIDC_CLIENT_SECRET=dev-ha-secret
-      - OIDC_DISPLAY_NAME=ScheduleMaster (dev)
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-dev-ha-secret}
+      - OIDC_DISPLAY_NAME=ScheduleMaster
       - OIDC_FORCE_HTTPS=false
-      - HA_CORS_ORIGINS=http://localhost:5173,http://localhost:4173
+      - HA_CORS_ORIGINS=${HA_CORS_ORGINS:-http://localhost:5173,http://localhost:4173}
+      - HA_ONBOARD_PASSWORD=${HA_ONBOARD_PASSWORD:-dev}
+      - PUID=${PUID:-}
+      - PGID=${PGID:-}
     healthcheck:
       # /manifest.json is a static 200 whether or not HA is onboarded.
       test:
