@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "dev:oidc",
+      "problemMatcher": [],
+      "label": "dev:oidc",
+      "detail": "pnpm --filter @heater-control/oidc-proxy dev"
+    },
+    {
+      "type": "npm",
+      "script": "dev:ha",
+      "problemMatcher": [],
+      "label": "dev:ha",
+      "detail": "docker compose -f ha-dev/docker-compose.yml up"
+    },
+    {
+      "type": "npm",
+      "script": "dev:web",
+      "problemMatcher": [],
+      "label": "dev:web",
+      "detail": "pnpm --filter @heater-control/web dev"
+    },
+    {
+      "label": "dev",
+      "detail": "start all dev servers",
+      "dependsOn": ["dev:ha", "dev:oidc", "dev:web"],
+      "problemMatcher": []
+    }
+  ]
+}
