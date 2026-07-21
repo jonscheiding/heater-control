@@ -1,49 +1,62 @@
-# Fly.io config for the Home Assistant DEMO instance: scale-to-zero, volume-less,
-# self-onboarding. Deploy from the REPO ROOT so the build context is the root:
-#   fly deploy -c ha-dev/fly.toml
+# fly.toml app configuration file generated for heater-control-ha-dev on 2026-07-20T17:16:54-04:00
 #
-# HAOS remains the eventual real deployment; this is a low-cost hosted demo, so
-# /config is ephemeral and the container re-provisions + re-onboards on a cold
-# boot (see ha-dev/docker-entrypoint.sh). Secrets are set out-of-band:
-#   fly secrets set OIDC_CLIENT_SECRET=... HA_ONBOARD_PASSWORD=...
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = 'heater-control-ha'
+app = 'heater-control-ha-dev'
 primary_region = 'ord'
 
 [build]
-  dockerfile = 'ha-dev/Dockerfile'
+  dockerfile = 'Dockerfile'
+
+[env]
+  HA_CORS_ORIGINS = 'http://localhost:5173'
+  # Trust all proxies: on Fly the internal_port is reachable ONLY via fly-proxy,
+  # whose (IPv6/mapped) peer IP is hard to pin. Without this HA 400s every proxied
+  # request ("X-Forwarded-For header from an untrusted proxy") and bounces you to
+  # login on each refresh. Only affects IP-based features; auth is still required.
+  HA_TRUSTED_PROXIES = '0.0.0.0/0,::/0'
+  HA_USE_X_FORWARDED_FOR = 'true'
+  HC_AUTO_SETUP = '1'
+  HC_STAGE_CONFIG = '1'
+  OIDC_CLIENT_ID = 'home-assistant'
+  OIDC_DISCOVERY_URL = 'https://sm-oidc-proxy.fly.dev/.well-known/openid-configuration'
+  OIDC_DISPLAY_NAME = 'ScheduleMaster'
+  OIDC_FORCE_HTTPS = 'true'
+  TZ = 'America/Chicago'
+
+# Persist /config so onboarding + the local calendar survive stop/suspend/redeploy
+# (no "create your smart home" flash on cold wake). Still scales to zero — the
+# volume is independent of the machine stopping. `fly deploy` auto-creates it at
+# initial_size for the first machine; or run `fly volume create ha_config`.
+[mounts]
+  source = 'ha_config'
+  destination = '/config'
+  initial_size = '1gb'
 
 [http_service]
   internal_port = 8123
   force_https = true
-  auto_stop_machines = 'suspend'   # snapshot RAM on idle → fast resume, state kept
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
-  min_machines_running = 0         # scale to zero when idle (cost)
+  min_machines_running = 0
   processes = ['app']
 
   [[http_service.checks]]
-    method = 'GET'
-    path = '/manifest.json'
     interval = '15s'
     timeout = '5s'
-    grace_period = '120s'          # HA cold boot is slow
-
-[env]
-  TZ = 'America/Chicago'
-  HC_STAGE_CONFIG = '1'            # volume-less: stage packages/blueprints on boot
-  HC_AUTO_SETUP = '1'             # self-onboard + create local calendar on boot
-  OIDC_DISCOVERY_URL = 'https://sm-oidc-proxy.fly.dev/.well-known/openid-configuration'
-  OIDC_CLIENT_ID = 'home-assistant'
-  OIDC_DISPLAY_NAME = 'ScheduleMaster'
-  OIDC_FORCE_HTTPS = 'true'
-  HA_USE_X_FORWARDED_FOR = 'true'
-  # Start broad-but-private, then pin to the address in HA's "untrusted proxy"
-  # startup warning (see fly logs). Avoid 0.0.0.0/0.
-  HA_TRUSTED_PROXIES = '127.0.0.1/32,::1,172.16.0.0/12,fdaa::/16'
-  # The SPA origin(s) that call this HA. Add your Netlify/prod SPA domain here.
-  HA_CORS_ORIGINS = 'http://localhost:5173'
+    grace_period = '4m0s'   # HA cold boot is slow; give it room before failing
+    method = 'GET'
+    # Probe an auth_oidc route (not /manifest.json). auth_oidc registers its
+    # provider + this route a few seconds AFTER HA's login page starts serving;
+    # gating "healthy" on it means fly-proxy holds the cold-wake request until the
+    # SSO provider is ready, so the "Log in with ScheduleMaster" button is present
+    # on first load instead of only after a reload. Trade-off: if auth_oidc fails
+    # to set up, the machine reads as unhealthy (fine here — OIDC is the point).
+    path = '/auth/oidc/welcome'
 
 [[vm]]
-  memory = '1gb'                   # bump if HA/recorder OOMs
+  memory = '2gb'            # HA + recorder; boots faster with headroom
   cpu_kind = 'shared'
-  cpus = 1
+  cpus = 2
+  memory_mb = 2048

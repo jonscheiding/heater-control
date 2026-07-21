@@ -46,5 +46,16 @@ if [ "${HC_AUTO_SETUP:-0}" = "1" ]; then
   HA_URL="${HA_URL:-http://localhost:8123}" python3 "$SRC/setup.py" &
 fi
 
-echo "[entrypoint] handing off to s6 /init"
-exec /init "$@"
+# Launch Home Assistant directly, bypassing the base image's s6 init. s6 insists
+# on being PID 1, which fails on platforms whose own init keeps PID 1 (Fly.io
+# Machines: "s6-overlay-suexec: fatal: can only run as pid 1"), and s6 has no way
+# to run otherwise. The image has no cont-init scripts and a single HA service,
+# so this replicates its launch exactly (see /etc/services.d/home-assistant/run);
+# process supervision is handled by the compose/Fly restart policy instead.
+echo "[entrypoint] launching Home Assistant"
+cd /config
+if [ -z "${DISABLE_JEMALLOC:-}" ] && [ -f /usr/local/lib/libjemalloc.so.2 ]; then
+  export LD_PRELOAD="/usr/local/lib/libjemalloc.so.2"
+  export MALLOC_CONF="background_thread:true,metadata_thp:auto,dirty_decay_ms:20000,muzzy_decay_ms:20000"
+fi
+exec python3 -m homeassistant --config /config

@@ -15,13 +15,14 @@ so nothing is hardcoded.
 - **`docker-entrypoint.sh`** — the image ENTRYPOINT. Stages `/config` from
   `/opt/provision`, renders the env-driven includes, optionally stages
   packages/blueprints (`HC_STAGE_CONFIG=1`) and self-onboards (`HC_AUTO_SETUP=1`),
-  then `exec /init`.
+  then launches Home Assistant **directly** (bypassing the base image's s6 init,
+  which requires PID 1 — unavailable on Fly's managed-init Machines).
 - **`render_config.py`** — writes `/config/http.yaml` + `/config/auth_oidc.yaml`
   from env (`OIDC_*`, `HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …).
 - **`setup.py`** — drives HA's REST API to onboard the owner and create the
   `local_calendar` the scheduling package needs. Idempotent; usable standalone.
 - **`docker-compose.yml`** — the single-service local dev stack.
-- **`fly.toml`** — the scale-to-zero, volume-less Fly demo.
+- **`fly.toml`** — the scale-to-zero Fly demo (small persistent `/config` volume).
 
 ## Environment variables
 
@@ -64,13 +65,16 @@ so changes to it need `up --build`). Runtime state lives in the gitignored
 
 Debugging the proxy: `pnpm --filter @heater-control/oidc-proxy exec tsx --inspect --watch src/server.ts` and attach your Node debugger.
 
-## Fly demo (scale-to-zero, volume-less)
+## Fly demo (scale-to-zero, small persistent volume)
 
-A hosted demo that costs ~nothing idle. `/config` is ephemeral — the container
-re-provisions and re-onboards on a cold boot, so there's no volume to manage.
+A hosted demo that costs ~nothing idle. It scales to zero, but keeps a small
+volume at `/config` so onboarding + the local calendar survive cold wakes (no
+"create your smart home" flash). `HC_AUTO_SETUP` still runs but is a one-time
+no-op once the volume is populated.
 
 ```bash
 fly launch --no-deploy -c ha-dev/fly.toml        # first time, or `fly apps create`
+fly volume create ha_config -c ha-dev/fly.toml -r ord -n 1   # or let deploy auto-create it
 fly secrets set -c ha-dev/fly.toml \
   OIDC_CLIENT_SECRET=... HA_ONBOARD_PASSWORD=...  # strong, non-dev
 fly deploy -c ha-dev/fly.toml                     # run from the repo root
@@ -78,15 +82,32 @@ fly deploy -c ha-dev/fly.toml                     # run from the repo root
 
 Notes:
 
-- `auto_stop_machines='suspend'` snapshots RAM so an idle instance resumes in
-  seconds with state intact; a full cold boot re-onboards via `HC_AUTO_SETUP`.
-- After the first deploy, check `fly logs` for HA's "untrusted proxy `<IP>`"
-  warning and **pin `HA_TRUSTED_PROXIES`** to that address (avoid `0.0.0.0/0`).
+- The `[mounts]` volume persists across stop/suspend/redeploy, so the machine
+  still scales to zero (`min_machines_running=0`) — the volume just isn't billed
+  for compute while stopped. `fly deploy` auto-creates it at `initial_size` for
+  the first machine if you skip `fly volume create`.
+- First boot onboards once (slow, ~1–2 min); `grace_period` is set to 4m so the
+  health check doesn't fail during it. Subsequent wakes are fast and go straight
+  to the login page.
+- The health check probes `/auth/oidc/welcome`, not `/manifest.json`. `auth_oidc`
+  registers its provider a few seconds after HA's login page starts serving, so
+  gating "healthy" on an auth_oidc route makes fly-proxy hold the cold-wake
+  request until the SSO provider is ready — otherwise the "Log in with …" button
+  is missing until you reload.
+- `configuration.yaml` omits `default_config` and enables only what this app
+  needs, dropping the network-discovery/cloud/mobile integrations that just slow
+  HA's boot on Fly.
+- `HA_TRUSTED_PROXIES=0.0.0.0/0,::/0` + `HA_USE_X_FORWARDED_FOR=true` are required.
+  HA rejects (`400`) any proxied request whose peer isn't trusted — which bounces
+  you back to the login page on every refresh behind Fly. Trust-all is safe here
+  because the internal port is only reachable via fly-proxy; pinning the exact
+  fly-proxy IPv6/mapped peer is unreliable. (If you check `fly logs` and still see
+  "untrusted proxy", the value didn't take — redeploy.)
 - Set `HA_CORS_ORIGINS` to the SPA's origin, and `OIDC_DISCOVERY_URL` to the
   proxy's public URL.
+- **Nabu Casa remote UI** needs the `cloud` integration, which the trimmed
+  `configuration.yaml` omits — add `cloud:` if you use it. Cloud manages its own
+  proxy trust via loopback, which trust-all already covers.
 - Cross-config on the **proxy** app (`sm-oidc-proxy`): `HA_REDIRECT_URIS` must
   include `https://<fly-ha-host>/auth/oidc/callback`, and `OIDC_ISSUER` must be
   the proxy's public URL.
-- Demo tradeoffs: automations/timers don't run while idle; a full cold boot
-  resets history/DB/sessions/calendar events. Want persistence? Add a
-  `[[mounts]]` block + a `fly volume` at `/config`.
