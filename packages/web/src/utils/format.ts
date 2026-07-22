@@ -1,3 +1,16 @@
+export function formatRemaining(
+  finishesAtIso: string,
+  now: number,
+): string | null {
+  const ms = new Date(finishesAtIso).getTime() - now;
+  if (ms <= 0) return null;
+  const totalMinutes = Math.ceil(ms / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `in ${hours}h ${minutes}m`;
+  return `in ${minutes}m`;
+}
+
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
@@ -10,6 +23,15 @@ export function formatUpcoming(startIso: string, now: number): string {
     hour: "numeric",
     minute: "2-digit",
   });
+
+  const minutes = Math.floor((start.getTime() - now) / (60 * 1000));
+
+  if (minutes < 4 * 60) {
+    const remaining = formatRemaining(startIso, now);
+    if (remaining != null) {
+      return remaining;
+    }
+  }
 
   if (startDay.getTime() === today.getTime()) return `today at ${timeStr}`;
 

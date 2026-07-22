@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   toDatetimeLocalString,
   toTopOfReasonableHour,
-} from "../schedules/format.js";
+} from "../utils/format.js";
 import styles from "./ScheduleDialog.module.css";
 
 interface Props {

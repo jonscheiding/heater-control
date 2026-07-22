@@ -1,9 +1,8 @@
 import type { HassEntity } from "home-assistant-js-websocket";
 
-import { formatRemaining } from "../heaters/format.js";
 import { computeHeaterState, STATUS_LABELS } from "../heaters/state.js";
 import type { HeaterSchedule } from "../schedules/api.js";
-import { formatUpcoming } from "../schedules/format.js";
+import { formatRemaining, formatUpcoming } from "../utils/format.js";
 import { CalendarButton } from "./CalendarButton.js";
 import styles from "./HeaterRow.module.css";
 import { PowerButton } from "./PowerButton.js";
@@ -70,7 +69,9 @@ export function HeaterRow({
         <div className={styles.info}>
           <p className={styles.name}>{name}</p>
           <p className={styles.status}>{STATUS_LABELS[state]}</p>
-          {remaining && <p className={styles.remaining}>{remaining}</p>}
+          {remaining && (
+            <p className={styles.remaining}>Auto-off in {remaining}</p>
+          )}
         </div>
         <Button round onClick={() => onSchedulePreset("1h")}>
           1H
