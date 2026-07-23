@@ -7,7 +7,11 @@ every `up`:
   1. Completes the "Create my smart home" wizard (owner account) if not done.
   2. Ensures a local_calendar named "Heater schedules" exists, so the
      calendar.heater_schedules entity the scheduling package triggers on is real.
-  3. Reloads automations so calendar-triggered ones attach after the calendar
+  3. Sets a placeholder home location (so the dashboard has coordinates to show
+     local weather for) unless a real location was already configured.
+  4. Ensures a met.no weather entry exists at the home location, giving the SPA
+     a weather.* entity with the current local temperature.
+  5. Reloads automations so calendar-triggered ones attach after the calendar
      entity is up (avoids a boot-order KeyError).
 
 Mirrors the frontend by driving REST endpoints, so HA writes its own state.
@@ -27,6 +31,19 @@ PASSWORD = os.environ.get("HA_ONBOARD_PASSWORD", "dev")
 LANGUAGE = os.environ.get("HA_ONBOARD_LANGUAGE", "en")
 CALENDAR_NAME = os.environ.get("HA_CALENDAR_NAME", "Heater schedules")
 CLIENT_ID = HA_URL + "/"
+
+# Placeholder home location (Minneapolis, MN — cold enough to need block heaters,
+# and consistent with the TZ=America/Chicago the dev stack sets). Only applied
+# when HA has no real location yet; override via env for a different demo spot.
+HOME_LOCATION_NAME = os.environ.get("HA_LOCATION_NAME", "Home")
+HOME_LATITUDE = float(os.environ.get("HA_LATITUDE", "44.9778"))
+HOME_LONGITUDE = float(os.environ.get("HA_LONGITUDE", "-93.2650"))
+HOME_ELEVATION = float(os.environ.get("HA_ELEVATION", "265"))
+
+# HA's built-in default coordinates (near San Diego) when onboarding can't
+# geolocate — treated as "unset" so we know it's safe to drop in the placeholder.
+HA_DEFAULT_LATITUDE = 32.87336
+HA_DEFAULT_LONGITUDE = -117.22743
 
 
 def _req(method, path, data=None, token=None, form=False):
@@ -140,6 +157,96 @@ def ensure_local_calendar(token):
     )
 
 
+def wait_for_running(token, timeout=180):
+    """Block until HA reports state == RUNNING. wait_for_ha() only checks that
+    onboarding is done, which is true immediately on a persisted volume (Fly)
+    while integrations/services are still starting. Calling set_location or a
+    config-entries flow before then 400s, so gate service calls on RUNNING."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            if _req("GET", "/api/config", token=token).get("state") == "RUNNING":
+                return True
+        except (urllib.error.HTTPError, urllib.error.URLError, ConnectionError):
+            pass
+        time.sleep(3)
+    print("[setup] warning: HA not 'RUNNING' after wait; proceeding anyway")
+    return False
+
+
+def _is_unset_location(lat, lon):
+    """True if the coords look like HA's un-geolocated default (or 0,0), meaning
+    no real location has been configured and it's safe to set the placeholder."""
+    near = lambda a, b: abs(a - b) < 0.001
+    if near(lat, 0) and near(lon, 0):
+        return True
+    return near(lat, HA_DEFAULT_LATITUDE) and near(lon, HA_DEFAULT_LONGITUDE)
+
+
+def ensure_home_location(token):
+    """Set the placeholder home location unless a real one is already configured.
+    Persisted by hass.config.async_update, so it survives restarts (Fly volume).
+    Returns the effective (lat, lon, elevation) for downstream use."""
+    cfg = _req("GET", "/api/config", token=token)
+    lat, lon = cfg.get("latitude", 0), cfg.get("longitude", 0)
+    if not _is_unset_location(lat, lon):
+        print(f"[setup] home location already set ({lat}, {lon}); leaving it")
+        return lat, lon, cfg.get("elevation", 0)
+    print(f"[setup] setting placeholder home location ({HOME_LATITUDE}, {HOME_LONGITUDE})")
+    try:
+        _req(
+            "POST",
+            "/api/services/homeassistant/set_location",
+            {
+                "latitude": HOME_LATITUDE,
+                "longitude": HOME_LONGITUDE,
+                "elevation": HOME_ELEVATION,
+            },
+            token=token,
+        )
+        return HOME_LATITUDE, HOME_LONGITUDE, HOME_ELEVATION
+    except urllib.error.HTTPError as e:
+        # Don't let a location hiccup abort the rest of setup (esp. met); met can
+        # still be created at the current coords.
+        print(f"[setup] set_location failed ({e.code}); leaving location at ({lat}, {lon})")
+        return lat, lon, cfg.get("elevation", 0)
+
+
+def ensure_met_weather(token, lat, lon, elevation):
+    """Create a met.no weather entry at (lat, lon) if none exists, so the SPA has
+    a weather.* entity to read the local temperature from. The trimmed
+    configuration.yaml omits default_config, so no weather source exists by
+    default — this adds one via the same config-entries flow the UI uses."""
+    entries = _req("GET", "/api/config/config_entries/entry", token=token)
+    for e in entries:
+        if e.get("domain") == "met":
+            print("[setup] met weather already present")
+            return
+    print(f"[setup] creating met weather at ({lat}, {lon})")
+    flow = _req(
+        "POST",
+        "/api/config/config_entries/flow",
+        {"handler": "met", "show_advanced_options": False},
+        token=token,
+    )
+    # A freshly-onboarded HA may auto-create met itself; if so the flow aborts
+    # (single_instance_allowed) and there's nothing more to do.
+    if flow.get("type") == "abort":
+        print(f"[setup] met flow aborted ({flow.get('reason')}); assuming present")
+        return
+    _req(
+        "POST",
+        "/api/config/config_entries/flow/" + flow["flow_id"],
+        {
+            "name": HOME_LOCATION_NAME,
+            "latitude": lat,
+            "longitude": lon,
+            "elevation": elevation,
+        },
+        token=token,
+    )
+
+
 def wait_for_calendar(token, timeout=90):
     """Wait until the local calendar entity is registered. Reloading the
     calendar-triggered automation before its platform finishes setting up races
@@ -166,13 +273,31 @@ def reload_automations(token):
               "automation will attach on the next reload/restart")
 
 
+def _safe(step, fn, *args):
+    """Run a setup step; log and swallow failures so one bad step (e.g. a
+    transient 400 on cold boot) can't abort the rest of provisioning."""
+    try:
+        return fn(*args)
+    except Exception as e:  # noqa: BLE001 — best-effort dev provisioning
+        print(f"[setup] {step} failed ({type(e).__name__}: {e}); continuing")
+        return None
+
+
 def main():
     steps = wait_for_ha()
     done = {s["step"]: s["done"] for s in steps} if steps else {"user": True}
     token = login() if done.get("user") else onboard(done)
-    ensure_local_calendar(token)
-    wait_for_calendar(token)
-    reload_automations(token)
+    # Gate service/config-entry calls on HA being fully up (see wait_for_running).
+    wait_for_running(token)
+    _safe("ensure_local_calendar", ensure_local_calendar, token)
+    lat, lon, elevation = _safe("ensure_home_location", ensure_home_location, token) or (
+        HOME_LATITUDE,
+        HOME_LONGITUDE,
+        HOME_ELEVATION,
+    )
+    _safe("ensure_met_weather", ensure_met_weather, token, lat, lon, elevation)
+    _safe("wait_for_calendar", wait_for_calendar, token)
+    _safe("reload_automations", reload_automations, token)
     print(f"[setup] complete — sign in as {USERNAME} / {PASSWORD}")
 
 

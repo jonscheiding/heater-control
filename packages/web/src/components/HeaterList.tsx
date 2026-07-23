@@ -19,6 +19,7 @@ import {
 import styles from "./HeaterList.module.css";
 import { HeaterRow } from "./HeaterRow.js";
 import { ScheduleDialog } from "./ScheduleDialog.js";
+import { WeatherBadge } from "./WeatherBadge.js";
 
 interface Props {
   connection: Connection;
@@ -40,11 +41,14 @@ export function HeaterList({ connection, entities, username }: Props) {
 
   if (heaters.length === 0) {
     return (
-      <div className={styles.empty}>
-        No heaters found. Expected entities matching{" "}
-        <code className={styles.code}>switch.heater_*</code> or{" "}
-        <code className={styles.code}>input_boolean.heater_*</code>.
-      </div>
+      <>
+        <WeatherBadge entities={entities} />
+        <div className={styles.empty}>
+          No heaters found. Expected entities matching{" "}
+          <code className={styles.code}>switch.heater_*</code> or{" "}
+          <code className={styles.code}>input_boolean.heater_*</code>.
+        </div>
+      </>
     );
   }
 
@@ -54,6 +58,7 @@ export function HeaterList({ connection, entities, username }: Props) {
 
   return (
     <>
+      <WeatherBadge entities={entities} />
       <ul className={styles.list}>
         {heaters.map((h) => {
           const isOn = h.state === "on";

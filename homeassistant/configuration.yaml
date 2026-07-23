@@ -42,7 +42,10 @@ template:
 person:
 
 # Per-heater packages: each bundles its input_boolean/timer/auto-off automation.
+# us_customary so weather temperatures come back in °F over the websocket API
+# (the unit system is what governs the unit; there's no per-request override).
 homeassistant:
+  unit_system: us_customary
   packages: !include_dir_named packages
 
 # OIDC login (auth_oidc) — adds an SSO option to HA's login screen.

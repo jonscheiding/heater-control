@@ -1,0 +1,28 @@
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline: auto;
+  margin-bottom: 1rem;
+  max-width: var(--content-max-width);
+  padding-inline: 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.icon {
+  display: flex;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--color-text-subtle);
+}
+
+.temp {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.location {
+  color: var(--color-text-subtle);
+}
