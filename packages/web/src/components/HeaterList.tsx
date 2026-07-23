@@ -16,6 +16,8 @@ import {
   useDeleteSchedule,
   useSchedules,
 } from "../schedules/hooks.js";
+import { useForecast } from "../weather/hooks.js";
+import { findWeatherEntity } from "../weather/weather.js";
 import styles from "./HeaterList.module.css";
 import { HeaterRow } from "./HeaterRow.js";
 import { ScheduleDialog } from "./ScheduleDialog.js";
@@ -30,6 +32,11 @@ interface Props {
 export function HeaterList({ connection, entities, username }: Props) {
   const now = useNow(1000);
   const heaters = getHeaters(entities);
+  const weatherEntity = findWeatherEntity(entities);
+  const { data: forecast = [] } = useForecast(
+    connection,
+    weatherEntity?.entity_id,
+  );
   const { data: schedules = [] } = useSchedules(connection);
   const create = useCreateSchedule(connection);
   const del = useDeleteSchedule(connection);
@@ -42,7 +49,6 @@ export function HeaterList({ connection, entities, username }: Props) {
   if (heaters.length === 0) {
     return (
       <>
-        <WeatherBadge entities={entities} />
         <div className={styles.empty}>
           No heaters found. Expected entities matching{" "}
           <code className={styles.code}>switch.heater_*</code> or{" "}
@@ -58,7 +64,7 @@ export function HeaterList({ connection, entities, username }: Props) {
 
   return (
     <>
-      <WeatherBadge entities={entities} />
+      <WeatherBadge forecast={forecast} now={now} />
       <ul className={styles.list}>
         {heaters.map((h) => {
           const isOn = h.state === "on";
@@ -73,6 +79,7 @@ export function HeaterList({ connection, entities, username }: Props) {
               powerSensor={findPowerSensor(h.entity_id, entities)}
               timer={findAutoOffTimer(h.entity_id, entities)}
               schedules={heaterSchedules}
+              forecast={forecast}
               now={now}
               isLoading={
                 (toggle.isPending &&

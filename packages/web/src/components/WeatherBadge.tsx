@@ -1,34 +1,32 @@
-import type { HassEntities } from "home-assistant-js-websocket";
-
-import { findWeatherEntity, getTemperature } from "../weather/weather.js";
-import { IconThermometer } from "./ui/IconThermometer.js";
+import { type ForecastEntry, sampleBlocks } from "../weather/forecast.js";
 import styles from "./WeatherBadge.module.css";
+import { IconThermometer } from "./ui/IconThermometer.js";
 
 interface Props {
-  entities: HassEntities;
+  forecast: ForecastEntry[];
+  now: number;
 }
 
-export function WeatherBadge({ entities }: Props) {
-  const entity = findWeatherEntity(entities);
-  const temp = getTemperature(entity);
-  if (!temp) return null;
+export function WeatherBadge({ forecast, now }: Props) {
+  const blocks = sampleBlocks(forecast, now);
 
-  // met.no names its home entity "Forecast Home"; drop the "Forecast " prefix so
-  // the label reads as a plain place name ("Home", "Forecast Denver" → "Denver").
-  const name = entity?.attributes.friendly_name;
-  const location =
-    typeof name === "string" ? name.replace(/^Forecast\s+/i, "") : "Local";
+  if (!blocks.length) return null;
 
   return (
     <div className={styles.badge}>
-      <span className={styles.icon} aria-hidden="true">
-        <IconThermometer />
-      </span>
-      <span className={styles.temp}>
-        {Math.round(temp.value)}
-        {temp.unit}
-      </span>
-      <span className={styles.location}>{location}</span>
+      <ul className={styles.blocks} aria-label="Next 24 hours">
+        <li className={styles.icon}>
+          <IconThermometer />
+        </li>
+        {blocks.map((b, i) => (
+          <li key={i} className={styles.block}>
+            <span className={styles.blockTime}>{b.label}</span>
+            <span className={styles.blockTemp}>
+              {Math.round(b.temperature)}&deg;
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

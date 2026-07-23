@@ -1,20 +1,27 @@
 .badge {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.625rem;
   margin-inline: auto;
   margin-bottom: 1rem;
   max-width: var(--content-max-width);
   padding-inline: 1rem;
+}
+
+.current {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--color-text-muted);
   font-size: 0.875rem;
 }
 
 .icon {
   display: flex;
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1.5rem;
+  height: 1.5rem;
   color: var(--color-text-subtle);
+  margin: auto;
 }
 
 .temp {
@@ -25,4 +32,32 @@
 
 .location {
   color: var(--color-text-subtle);
+}
+
+.blocks {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+}
+
+.block {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.blockTime {
+  font-size: 0.75rem;
+  color: var(--color-text-subtle);
+}
+
+.blockTemp {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
 }

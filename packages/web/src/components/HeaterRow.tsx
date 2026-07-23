@@ -3,6 +3,7 @@ import type { HassEntity } from "home-assistant-js-websocket";
 import { computeHeaterState, STATUS_LABELS } from "../heaters/state.js";
 import type { HeaterSchedule } from "../schedules/api.js";
 import { formatRemaining, formatUpcoming } from "../utils/format.js";
+import { forecastAt, type ForecastEntry } from "../weather/forecast.js";
 import { CalendarButton } from "./CalendarButton.js";
 import styles from "./HeaterRow.module.css";
 import { PowerButton } from "./PowerButton.js";
@@ -13,6 +14,7 @@ interface Props {
   powerSensor: HassEntity | undefined;
   timer: HassEntity | undefined;
   schedules: HeaterSchedule[];
+  forecast: ForecastEntry[];
   now: number;
   isLoading: boolean;
   onToggle: () => void;
@@ -27,6 +29,7 @@ export function HeaterRow({
   powerSensor,
   timer,
   schedules,
+  forecast,
   now,
   isLoading,
   onToggle,
@@ -83,23 +86,32 @@ export function HeaterRow({
       </div>
       {sortedSchedules.length > 0 && (
         <ul className={styles.schedules}>
-          {sortedSchedules.map((s) => (
-            <li key={s.uid} className={styles.scheduleItem}>
-              <span className={styles.scheduleText}>
-                Scheduled {formatUpcoming(s.startIso, now)}
-                {s.createdBy ? ` · by ${s.createdBy}` : ""}
-              </span>
-              <Button
-                onClick={() => {
-                  onCancelSchedule(s.uid);
-                }}
-                disabled={cancellingUid === s.uid}
-                aria-label={`Cancel schedule ${formatUpcoming(s.startIso, now)}`}
-              >
-                Cancel
-              </Button>
-            </li>
-          ))}
+          {sortedSchedules.map((s) => {
+            const forecastTemp = forecastAt(
+              forecast,
+              new Date(s.startIso).getTime(),
+            );
+            return (
+              <li key={s.uid} className={styles.scheduleItem}>
+                <span className={styles.scheduleText}>
+                  Scheduled {formatUpcoming(s.startIso, now)}
+                  {forecastTemp != null && (
+                    <> · {Math.round(forecastTemp)}&deg;</>
+                  )}
+                  {s.createdBy != null && ` · by ${s.createdBy}`}
+                </span>
+                <Button
+                  onClick={() => {
+                    onCancelSchedule(s.uid);
+                  }}
+                  disabled={cancellingUid === s.uid}
+                  aria-label={`Cancel schedule ${formatUpcoming(s.startIso, now)}`}
+                >
+                  Cancel
+                </Button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </li>
