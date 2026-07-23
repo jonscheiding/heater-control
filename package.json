@@ -8,6 +8,7 @@
     "dev": "concurrently 'pnpm dev:oidc' 'pnpm dev:web' 'pnpm dev:ha'",
     "dev:ha": "docker compose -f ha-dev/docker-compose.yml up",
     "dev:oidc": "pnpm --filter @heater-control/oidc-proxy dev",
+    "dev:sm": "pnpm --filter @heater-control/sm-client dev",
     "dev:web": "pnpm --filter @heater-control/web dev",
     "format": "pnpm prettier -c .",
     "lint": "eslint",

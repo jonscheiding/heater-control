@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
+    "dev": "tsc -b tsconfig.build.json --watch --preserveWatchOutput",
     "test": "vitest run",
     "test:smoke": "vitest run --mode smoke",
     "typecheck": "tsc --noEmit"

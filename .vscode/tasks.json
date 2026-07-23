@@ -10,6 +10,13 @@
     },
     {
       "type": "npm",
+      "script": "dev:sm",
+      "problemMatcher": [],
+      "label": "dev:sm",
+      "detail": "pnpm --filter @heater-control/sm-client dev"
+    },
+    {
+      "type": "npm",
       "script": "dev:ha",
       "problemMatcher": [],
       "label": "dev:ha",
@@ -25,7 +32,7 @@
     {
       "label": "dev",
       "detail": "start all dev servers",
-      "dependsOn": ["dev:ha", "dev:oidc", "dev:web"],
+      "dependsOn": ["dev:ha", "dev:oidc", "dev:web", "dev:sm"],
       "problemMatcher": []
     }
   ]
