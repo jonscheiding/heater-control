@@ -35,4 +35,6 @@
 .round > svg {
   margin: 0.25rem;
   margin-top: calc(0.25rem - 1px);
+  height: 100%;
+  width: 100%;
 }
