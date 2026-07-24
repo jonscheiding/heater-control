@@ -1,3 +1,7 @@
+// Load Sentry before anything else so it can instrument the runtime.
+import "./instrument.js";
+
+import * as Sentry from "@sentry/node";
 import express, {
   type NextFunction,
   type Request,
@@ -31,6 +35,7 @@ app.use(provider.callback());
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
+  Sentry.captureException(err);
   if (res.headersSent) return;
   res.status(500).send(errorPage("Something went wrong. Please try again."));
 });

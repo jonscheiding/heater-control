@@ -1,8 +1,12 @@
+import * as Sentry from "@sentry/node";
 import { Router, urlencoded, type Request, type Response } from "express";
 import { nanoid } from "nanoid";
 import { type InteractionResults, type Provider } from "oidc-provider";
 
-import { authenticate } from "@heater-control/sm-client";
+import {
+  authenticate,
+  ScheduleMasterFlowError,
+} from "@heater-control/sm-client";
 
 import type { AccountStore } from "./account-store.js";
 import { errorPage, loginPage } from "./views.js";
@@ -95,6 +99,17 @@ export function interactionsRouter(
       } catch (e) {
         const id = nanoid();
         console.error("Authentication error", id, e);
+        Sentry.withScope((scope) => {
+          scope.setTag("error.id", id);
+          // Tag genuine scraper drift distinctly from transient comms errors so
+          // the "notify on any scrape failure" alert can target it precisely,
+          // and collapse every occurrence into one issue rather than a flood.
+          if (e instanceof ScheduleMasterFlowError) {
+            scope.setTag("sm.scrape_failure", "true");
+            scope.setFingerprint(["sm-scrape-failure"]);
+          }
+          Sentry.captureException(e);
+        });
         res
           .status(502)
           .send(

@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "dev": "tsx watch --include '../sm-client/dist/**' --inspect --env-file-if-exists=.env.local src/server.ts",
+    "dev": "tsx watch --include '../sm-client/dist/**' --env-file-if-exists=.env.local src/server.ts",
     "gen-keys": "tsx scripts/gen-keys.ts",
-    "start": "node dist/server.js",
+    "start": "node --import ./dist/instrument.js dist/server.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@heater-control/sm-client": "workspace:*",
+    "@sentry/node": "^10.66.0",
     "envalid": "^8.2.0",
     "express": "^5.1.0",
     "jose": "^5.9.6",

@@ -119,6 +119,32 @@ entirely via env vars (see `oidc-proxy/.env.example`).
    — to catch ScheduleMaster login-flow changes before pilots do (wire into a scheduled CI
    job with repo secrets).
 
+## 3b. Monitoring & alerts (Sentry)
+
+Both the proxy and the SPA report errors to [Sentry](https://sentry.io). Reporting
+is a no-op until a DSN is set, so it's opt-in per environment.
+
+1. **Create two Sentry projects** (or one shared) — a Node project for the proxy
+   and a Browser/React project for the SPA — and copy each DSN.
+2. **Proxy**: set the DSN as a Fly secret (redeploys automatically):
+   ```bash
+   fly secrets set SENTRY_DSN='https://…@…ingest.sentry.io/…' -a sm-oidc-proxy
+   ```
+   Optionally `SENTRY_ENVIRONMENT` (defaults to `production`).
+3. **SPA**: add `VITE_SENTRY_DSN` in the Netlify dashboard (build-time env var) and
+   redeploy. It's baked into the client bundle — a browser DSN is safe to expose.
+4. **Alert on ScheduleMaster scrape failures** (the important one). When the
+   scraper stops understanding ScheduleMaster's login/profile pages, the proxy
+   captures the error tagged `sm.scrape_failure=true`, grouped under a single
+   `sm-scrape-failure` issue. In the proxy's Sentry project:
+   - **Alerts → Create Alert → Issues**.
+   - Condition: _The event's tags_ — `sm.scrape_failure` **equals** `true`.
+   - Also fire _when an issue changes state to escalating/regressed_ so a
+     recurrence after resolution re-notifies.
+   - Action: **Send a notification to email** (your address / a team alias).
+     Because all scrape failures share one fingerprint, this is one alert that fires
+     on the first failure and again on any regression — not a per-request flood.
+
 ## 4. Smoke test
 
 1. Open the Netlify URL on your phone.

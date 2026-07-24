@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react";
 import {
   createConnection,
   getAuth,
@@ -14,6 +15,7 @@ export function connect(): Promise<Connection> {
   connectionPromise ??= doConnect().catch((err: unknown) => {
     connectionPromise = null;
     currentAuth = null;
+    Sentry.captureException(err, { tags: { area: "ha-connection" } });
     throw err;
   });
   return connectionPromise;
@@ -104,6 +106,13 @@ export async function haFetch(
   if (response.status === 401) {
     // Token was rejected despite our refresh attempt — force a re-login.
     reauthenticate();
+  } else if (response.status >= 500) {
+    // HA (or its reverse proxy) is erroring — worth surfacing, not just failing
+    // silently at the call site.
+    Sentry.captureMessage(`HA request to ${path} failed: ${response.status}`, {
+      level: "error",
+      tags: { area: "ha-fetch" },
+    });
   }
   return response;
 }
