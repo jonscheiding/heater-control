@@ -7,9 +7,15 @@ import { HeaterList } from "./components/HeaterList.js";
 import { logout } from "./ha/connection.js";
 import { useConnection } from "./ha/hooks.js";
 
+const PAGE_TITLE = import.meta.env.VITE_APP_NAME ?? "Heater Control";
+
 export default function App() {
   const { connection, entities, user, status } = useConnection();
   const errorRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    document.title = PAGE_TITLE;
+  }, []);
 
   useEffect(() => {
     if (status === "error" || status === "reconnecting") {
@@ -30,7 +36,11 @@ export default function App() {
 
   return (
     <div className={styles.app}>
-      <Banner username={user?.name ?? null} onLogout={logoutInternal} />
+      <Banner
+        title={PAGE_TITLE}
+        username={user?.name ?? null}
+        onLogout={logoutInternal}
+      />
       <main className={styles.main}>
         <dialog ref={errorRef}>
           <div className={styles.errorBody}>
@@ -86,6 +96,17 @@ export default function App() {
           />
         )}
       </main>
+      {import.meta.env.VITE_REPO_URL != null && (
+        <div className={styles.codeLink}>
+          <a
+            href={import.meta.env.VITE_REPO_URL}
+            target="_blank"
+            rel="noopener noreferer"
+          >
+            <img src="github.png" alt="View code on GitHub" />
+          </a>
+        </div>
+      )}
       <ToastContainer position="top-center" />
     </div>
   );

@@ -2,6 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_HA_URL: string;
+  readonly VITE_APP_NAME?: string;
+  readonly VITE_REPO_URL?: string;
   /** Sentry DSN for browser error reporting. Blank disables reporting. */
   readonly VITE_SENTRY_DSN?: string;
 }

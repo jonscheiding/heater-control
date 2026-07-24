@@ -7,6 +7,15 @@
   padding-block: 1rem;
 }
 
+.codeLink {
+  width: 4rem;
+  margin: auto;
+
+  img {
+    width: 100%;
+  }
+}
+
 .errorBody {
   display: flex;
   flex-direction: column;
