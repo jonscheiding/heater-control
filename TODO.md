@@ -3,7 +3,7 @@
 ## CLEANUP
 
 - [x] remove Tailwind
-- [ ] add/improve logging for odic proxy
+- [x] add/improve logging for odic proxy
 - [x] clean up client id / config management (ha client id, urls, etc)
 
 ## DEPLOYMENT
@@ -12,8 +12,9 @@
 - [x] refactor for readability
 - [x] clean up deploy files organization (separate `deployment` dir)?
 - [x] GH Actions workflows for periodic tests (weekly?)
+- [ ] minimal automation for live HAOS deployment
 
 ## FEATURES
 
-- [ ] Temp sensor support
+- [x] Temp sensor support
 - [ ] Schedule Master support
