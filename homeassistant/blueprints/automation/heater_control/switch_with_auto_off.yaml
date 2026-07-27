@@ -4,7 +4,9 @@ blueprint:
     Pairs a toggleable entity (switch or input_boolean) with a timer that
     automatically turns it off after a fixed duration. The timer is exposed
     as a regular HA entity so consumers (SPA, Lovelace) can show the
-    countdown or planned-off time.
+    countdown or planned-off time. On HA startup, sweeps up auto-offs that
+    were missed while HA was down (timer restore never fires timer.finished
+    for expired timers).
   domain: automation
   input:
     switch:
@@ -24,6 +26,10 @@ blueprint:
 
 mode: queued
 
+variables:
+  switch_entity: !input switch
+  autooff_timer_entity: !input autooff_timer
+
 trigger:
   - platform: state
     entity_id: !input switch
@@ -38,6 +44,9 @@ trigger:
     event_data:
       entity_id: !input autooff_timer
     id: "finished"
+  - platform: homeassistant
+    event: start
+    id: "startup"
 
 action:
   - choose:
@@ -52,6 +61,18 @@ action:
             target:
               entity_id: !input autooff_timer
       - conditions: "{{ trigger.id == 'finished' }}"
+        sequence:
+          - service: homeassistant.turn_off
+            target:
+              entity_id: !input switch
+      # Startup sweep: `restore: true` only resumes timers with time left; one
+      # that expired while HA was down comes back `idle` WITHOUT firing
+      # timer.finished. Switch on + timer idle can only mean a missed auto-off,
+      # so fail safe and turn off.
+      - conditions: >
+          {{ trigger.id == 'startup'
+             and is_state(switch_entity, 'on')
+             and is_state(autooff_timer_entity, 'idle') }}
         sequence:
           - service: homeassistant.turn_off
             target:

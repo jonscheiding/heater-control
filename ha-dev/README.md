@@ -18,7 +18,8 @@ so nothing is hardcoded.
   then launches Home Assistant **directly** (bypassing the base image's s6 init,
   which requires PID 1 — unavailable on Fly's managed-init Machines).
 - **`render_config.py`** — writes `/config/http.yaml` + `/config/auth_oidc.yaml`
-  from env (`OIDC_*`, `HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …).
+  from env (`OIDC_*`, `HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …), plus the
+  Fly-only keepalive package when `HC_KEEPALIVE_URL` is set.
 - **`setup.py`** — drives HA's REST API to onboard the owner and create the
   `local_calendar` the scheduling package needs. Idempotent; usable standalone.
 - **`docker-compose.yml`** — the single-service local dev stack.
@@ -36,6 +37,7 @@ so nothing is hardcoded.
 | `HA_USE_X_FORWARDED_FOR` / `HA_TRUSTED_PROXIES` | reverse-proxy trust                           | off                    | on               |
 | `HC_STAGE_CONFIG`                               | copy baked packages/blueprints into `/config` | unset                  | `1`              |
 | `HC_AUTO_SETUP`                                 | self-onboard + create calendar on boot        | `1`                    | `1`              |
+| `HC_KEEPALIVE_URL`                              | self-ping URL so timers outlive Fly auto_stop | unset                  | public HA URL    |
 
 ## Local dev (OIDC proxy on the host)
 

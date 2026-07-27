@@ -18,6 +18,10 @@ primary_region = 'ord'
   HA_TRUSTED_PROXIES = '0.0.0.0/0,::/0'
   HA_USE_X_FORWARDED_FOR = 'true'
   HC_AUTO_SETUP = '1'
+  # Self-ping through fly-proxy while auto-off timers run, so auto_stop doesn't
+  # suspend the machine before they fire (see render_config.py). Must be the
+  # public URL — only proxied traffic resets Fly's idle clock.
+  HC_KEEPALIVE_URL = 'https://heater-control-ha-dev.fly.dev/auth/oidc/welcome'
   HC_STAGE_CONFIG = '1'
   OIDC_CLIENT_ID = 'home-assistant'
   OIDC_DISCOVERY_URL = 'https://sm-oidc-proxy.fly.dev/.well-known/openid-configuration'
