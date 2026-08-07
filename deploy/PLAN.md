@@ -25,32 +25,33 @@ real hardware made the case for cutting it back to **push-only**:
 
 ## What `deploy/` does now
 
-- `push.sh` — rsync the iterating config to the box over the SSH add-on, then
+- `push.sh` (default) — rsync the iterating config over the SSH add-on, then
   apply the lightest action: `packages/` + `blueprints/automation/heater_control/`
   (YAML → `homeassistant.reload_all`, hot) and repo-tracked `custom_components/*`
   (Python → core restart, gated on a pre-restart config check). Preflights the
-  token/URL first. Per-dir `--delete`, never at `custom_components/` root, so the
-  hand-installed `auth_oidc` and any HACS installs are untouched.
+  token/URL first. Per-dir `--delete`, never at `custom_components/` root, so
+  other components on the box are untouched.
+- `push.sh --oidc` — the set-once OIDC bundle: materialize the pinned + patched
+  `auth_oidc` component and ship it; render `auth_oidc.yaml` + `http.yaml`
+  (`render_includes.py`, emitting the client secret as a `!secret` reference);
+  upsert `sm_oidc_client_secret` into the box's `secrets.yaml`; restart. Kept
+  behind a flag so routine pushes don't re-fetch the release.
 - `heater.sh` — scaffold a new heater package from the `heater_1.yaml` template.
-- CI (`deploy-haos.yml`) — runs `push.sh` on merge over Tailscale.
+- CI (`deploy-haos.yml`) — runs the default `push.sh` on merge over Tailscale.
 
-Everything set-once on the box — onboarding, add-ons, `configuration.yaml`, the
-`http`/`auth_oidc` includes, the hand-installed `auth_oidc` component, other
-integrations — is maintained by hand.
+Maintained by hand on the box: onboarding, add-ons, `configuration.yaml` itself
+(you keep the `auth_oidc`/`http` `!include` lines), and other integrations.
 
 ## What moved back to `ha-dev/`
 
 Container provisioning returned to being self-contained: `ha-dev/setup.py`
 (onboarding) and `ha-dev/render_config.py` (env → includes) run only at container
-start. `deploy/lib/` (and `bootstrap.sh`) were removed.
-
-Repo-tracked `custom_components/` (e.g. the schedulemaster integration) **are** in
-scope — they iterate, so `push.sh` ships them and restarts. The `auth_oidc`
-component stays out because it's set-once and not in the repo.
+start. `deploy/lib/` (and `bootstrap.sh`) were removed. The prod include renderer
+is a separate `deploy/render_includes.py` — the container inlines the OIDC secret
+(ephemeral), while prod references it via `!secret` (lives in `secrets.yaml`).
 
 ## Out of scope by design
 
-- **Base-config / include changes** (`configuration.yaml`, `http.yaml`,
-  `auth_oidc.yaml`): edited by hand on the box — they change rarely and a mistake
-  can take HA down, so they don't belong in an automated push.
+- **`configuration.yaml` itself:** edited by hand on the box — the `!include`
+  lines are added once, and a mistake in the top-level config can take HA down.
 - **Golden backups / programmatic onboarding:** dropped.

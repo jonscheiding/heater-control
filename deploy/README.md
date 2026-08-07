@@ -1,23 +1,25 @@
 # deploy — HAOS config push
 
-Ships ongoing app-config updates to the **production Home Assistant OS box** and
-applies them. Scope is the config that iterates: `packages/` (heaters + their
+Ships config updates to the **production Home Assistant OS box** and applies
+them. Default scope is the config that iterates: `packages/` (heaters + their
 automations), the `heater_control` blueprint, and repo-tracked
-`custom_components/` (e.g. the schedulemaster integration).
+`custom_components/` (e.g. the schedulemaster integration). A separate `--oidc`
+flag handles the set-once OIDC bundle (patched `auth_oidc` component + rendered
+includes + secret).
 
-The box's **set-once** pieces stay by-hand and are never touched: onboarding,
-add-ons, `configuration.yaml`, the `http.yaml`/`auth_oidc.yaml` includes, and the
-hand-installed `auth_oidc` component (it's not in the repo, so it's never synced
-or deleted). For a throwaway local/demo HA that self-provisions from the same
-reference config, see the container in [`../ha-dev/`](../ha-dev/) instead.
+The box's other set-once pieces stay by-hand and are never touched: onboarding,
+add-ons, and `configuration.yaml` itself (you keep the `!include` lines there).
+For a throwaway local/demo HA that self-provisions from the same reference
+config, see the container in [`../ha-dev/`](../ha-dev/) instead.
 
 ## Contents
 
-| File           | What it does                                                            |
-| -------------- | ----------------------------------------------------------------------- |
-| `push.sh`      | rsync packages/ + blueprints/ + custom_components/, then reload/restart |
-| `heater.sh`    | scaffold a new `homeassistant/packages/heater_<n>.yaml`                 |
-| `.env.example` | copy to `.env` (gitignored) and fill in                                 |
+| File                 | What it does                                                            |
+| -------------------- | ----------------------------------------------------------------------- |
+| `push.sh`            | rsync packages/ + blueprints/ + custom_components/, then reload/restart |
+| `heater.sh`          | scaffold a new `homeassistant/packages/heater_<n>.yaml`                 |
+| `render_includes.py` | render auth_oidc.yaml + http.yaml for `push.sh --oidc`                  |
+| `.env.example`       | copy to `.env` (gitignored) and fill in                                 |
 
 ## Prerequisites
 
@@ -73,10 +75,36 @@ A config check runs before any restart and aborts it on errors (a
 freshly-pushed component showing as an "integration not found" _warning_ is
 expected and non-fatal — the restart loads it).
 
-> **What's still by-hand:** the `auth_oidc` component and the
-> `http.yaml`/`auth_oidc.yaml` includes are set-once and live only on the box.
-> `push.sh` only syncs `custom_components/` dirs that exist **in the repo**, so it
-> never overwrites or deletes them.
+`push.sh` only syncs `custom_components/` dirs that exist **in the repo**, so a
+hand-installed component (or HACS install) on the box is never overwritten or
+deleted — `--delete` is scoped inside each dir, never at `custom_components/` root.
+
+### The OIDC bundle (`--oidc`)
+
+```bash
+deploy/push.sh --oidc        # deploy/refresh the OIDC integration + config
+```
+
+Run this at setup, or to bump the pinned version / rotate the client secret /
+change CORS. It:
+
+- materializes the pinned + **patched** `auth_oidc` component (the patch is the
+  "Continue on this device" fix in `homeassistant/patches/`) and ships it,
+- renders `auth_oidc.yaml` + `http.yaml` from `.env` (`OIDC_*`, `HA_CORS_ORIGINS`,
+  `HA_TRUSTED_PROXIES`) and ships them,
+- upserts `sm_oidc_client_secret` into the box's `secrets.yaml` (auth_oidc.yaml
+  references it via `!secret`), preserving your other secrets,
+- restarts (all of the above need it).
+
+**One-time by hand:** add the include lines to the box's `configuration.yaml`:
+
+```yaml
+auth_oidc: !include auth_oidc.yaml
+http: !include http.yaml
+```
+
+(With the http/CORS scope, `http.yaml` is your full `http:` block — don't also
+define `http:` inline, or HA rejects the duplicate key.)
 
 ## CI
 

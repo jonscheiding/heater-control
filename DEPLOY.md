@@ -116,9 +116,12 @@ entirely via env vars (see `oidc-proxy/.env.example`).
    (from the repo root). Recommended host: **Fly.io** (`fly deploy`, scale-to-zero suits a
    login-only service); alternatives are Railway, or a container beside HA on the same
    Docker host reusing its Tailscale/reverse-proxy exposure.
-4. **Point HA at it**: merge `homeassistant/auth_oidc.example.yaml` into `configuration.yaml`
-   with the matching discovery URL / client credentials, and add
-   `sm_oidc_client_secret` to `secrets.yaml`. Restart HA.
+4. **Point HA at it**: set the proxy's discovery URL + client credentials in
+   `deploy/.env` (`OIDC_*`) and run `deploy/push.sh --oidc`, which renders
+   `auth_oidc.yaml`/`http.yaml`, ships the patched `auth_oidc` component, and
+   writes `sm_oidc_client_secret` to the box's `secrets.yaml`. Add the
+   `auth_oidc: !include auth_oidc.yaml` / `http: !include http.yaml` lines to
+   `configuration.yaml` once, by hand. (See [`deploy/README.md`](deploy/README.md).)
 5. **Guard against site drift**: run the live smoke tests periodically —
    `SM_TEST_USERNAME=… SM_TEST_PASSWORD=… pnpm --filter @heater-control/sm-client test:smoke`
    — to catch ScheduleMaster login-flow changes before pilots do (wire into a scheduled CI

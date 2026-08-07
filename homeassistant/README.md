@@ -24,10 +24,9 @@ demo.
   timer-start / timer-cancel / timer-finish wiring so each per-heater file stays
   trivially small.
 - `patches/` — local overrides applied on top of the `auth_oidc` integration
-  (see `patches/README.md`). The container image applies these at build time; on
-  HAOS (where HACS installs the integration) reapply them after updates.
-- `auth_oidc.example.yaml` — a reference `auth_oidc` block. The dev/demo image
-  generates the live one from env, so this is documentation for the HAOS case.
+  (see `patches/README.md`). Both the container (at build time) and
+  `deploy/push.sh --oidc` (which ships the pinned + pre-patched component to
+  HAOS) overlay these, so no HACS install or manual reapply is needed.
 
 ## Adding a new heater
 
@@ -50,7 +49,10 @@ automatically; the SPA picks them up via WebSocket without any code change.
 
 - **Local dev + Fly demo:** see [`../ha-dev/README.md`](../ha-dev/README.md).
 - **HAOS (real deployment):** the box is **provisioned by hand** (onboarding,
-  add-ons, `configuration.yaml`, the `http.yaml`/`auth_oidc.yaml` includes, and
-  integrations). Only the frequently-changing app config — `packages/` and the
-  `heater_control` blueprint — is shipped by [`../deploy/`](../deploy/) via
-  `deploy/push.sh` (rsync over the SSH add-on + `homeassistant.reload_all`).
+  add-ons, and `configuration.yaml` — where you keep the `auth_oidc`/`http`
+  `!include` lines). [`../deploy/`](../deploy/) then ships the iterating config
+  via `deploy/push.sh` — `packages/`, the `heater_control` blueprint, and
+  repo-tracked `custom_components/` (reload for YAML, restart for components).
+  `deploy/push.sh --oidc` handles the set-once OIDC bundle: the pinned + patched
+  `auth_oidc` component, the rendered `auth_oidc.yaml`/`http.yaml` includes, and
+  the `sm_oidc_client_secret` in `secrets.yaml`.
