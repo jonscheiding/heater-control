@@ -24,13 +24,11 @@ Auth chain: upstream OIDC issuer (Google for testing, the ScheduleMaster proxy f
 > reference config + `auth_oidc` (patched) and self-onboards. See
 > [`ha-dev/README.md`](ha-dev/README.md).
 >
-> **Prod HAOS box:** use the [`deploy/`](deploy/) toolkit — `deploy/bootstrap.sh`
-> for first-run onboarding + SSH add-on install, `deploy/push.sh` to ship config
-> updates (auto reload-or-restart), `deploy/heater.sh` to add heaters. It runs the
-> same provisioning logic remotely over SSH + REST. See
+> **Prod HAOS box:** provisioned **by hand** (the steps below). Once it's up,
+> [`deploy/`](deploy/) automates only the recurring part — `deploy/push.sh` ships
+> `packages/` + the `heater_control` blueprint over SSH and hot-reloads, and
+> `deploy/heater.sh` scaffolds a new heater package. See
 > [`deploy/README.md`](deploy/README.md).
->
-> The steps below describe the fully manual path.
 
 ### 1a. Start HA in Docker (skip if already running)
 

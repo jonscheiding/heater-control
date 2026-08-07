@@ -35,10 +35,9 @@ COPY homeassistant/configuration.yaml /opt/provision/configuration.yaml
 COPY homeassistant/packages /opt/provision/packages
 COPY homeassistant/blueprints /opt/provision/blueprints
 
-# Tooling. The provisioning logic (render_config.py, provision.py, ha_api.py)
-# lives in deploy/lib/ and is shared with the HAOS deploy toolkit — one source
-# of truth. The entrypoint invokes them from /opt/provision/lib.
-COPY deploy/lib /opt/provision/lib
+# Tooling.
+COPY ha-dev/render_config.py /opt/provision/render_config.py
+COPY ha-dev/setup.py /opt/provision/setup.py
 COPY ha-dev/docker-entrypoint.sh /opt/provision/docker-entrypoint.sh
 RUN chmod +x /opt/provision/docker-entrypoint.sh
 

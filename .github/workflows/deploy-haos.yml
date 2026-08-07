@@ -1,24 +1,27 @@
 name: Deploy to HAOS
 
-# Push the tracked HA config to the prod HAOS box on merge to main. Reaches the
-# box over Tailscale (no inbound ports); deploy/push.sh rsyncs config over the
-# SSH add-on and reloads or restarts as needed.
+# Push the iterating app config (packages/, blueprints/, repo-tracked
+# custom_components/) to the hand-provisioned prod HAOS box on merge to main, then
+# apply it — reload_all for YAML, a core restart if a custom_component changed.
+# Reaches the box over Tailscale (no inbound ports); deploy/push.sh rsyncs over
+# the SSH add-on. The box's set-once pieces (onboarding, add-ons,
+# configuration.yaml, the http/auth_oidc includes) are maintained by hand.
 #
 # Required repo secrets:
 #   HAOS_HA_URL       HA base URL (over the tailnet or its public URL)
-#   HAOS_HA_TOKEN     long-lived access token (for reload/restart + config check)
+#   HAOS_HA_TOKEN     long-lived access token (for the reload call)
 #   HAOS_SSH_TARGET   rsync target, e.g. root@haos  (the box's MagicDNS name)
 #   HAOS_SSH_KEY      private key authorized on the SSH add-on
 #   TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET   Tailscale OAuth client (scope: devices)
-# The tailnet ACL must let tag:ci reach the box's SSH port. This job does not
-# render http.yaml/auth_oidc.yaml — run `deploy/push.sh --render-config` by hand
-# when OIDC/CORS settings change (keeps OIDC secrets out of CI).
+# The tailnet ACL must let tag:ci reach the box's SSH port.
 on:
   push:
     branches: [main]
     paths:
-      - "homeassistant/**"
-      - "deploy/**"
+      - "homeassistant/packages/**"
+      - "homeassistant/blueprints/**"
+      - "homeassistant/custom_components/**"
+      - "deploy/push.sh"
       - ".github/workflows/deploy-haos.yml"
   workflow_dispatch:
 
