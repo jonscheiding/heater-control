@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Post-boot HA setup for the dev stack: onboarding + config entries.
+"""Post-boot Home Assistant provisioning: onboarding + config entries.
 
-Runs after HA is healthy (see docker-compose.yml). Idempotent — safe to run on
-every `up`:
+Drives HA's REST API to bring a fresh instance to a usable baseline. Idempotent
+— safe to run on every boot (dev/Fly) or repeatedly against the prod HAOS box:
 
   1. Completes the "Create my smart home" wizard (owner account) if not done.
   2. Ensures a local_calendar named "Heater schedules" exists, so the
@@ -15,14 +15,18 @@ every `up`:
      entity is up (avoids a boot-order KeyError).
 
 Mirrors the frontend by driving REST endpoints, so HA writes its own state.
-Dev convenience only — the default credentials are intentionally trivial.
+
+Runs in two contexts from one implementation (see deploy/PLAN.md):
+  - the container entrypoint (dev + Fly demo), self-onboarding on boot with
+    trivial default credentials;
+  - the deploy/ toolkit's bootstrap.sh, onboarding the real HAOS box once with
+    real credentials supplied via env.
 """
-import json
 import os
 import time
 import urllib.error
-import urllib.parse
-import urllib.request
+
+from ha_api import bind
 
 HA_URL = os.environ.get("HA_URL", "http://localhost:8123").rstrip("/")
 NAME = os.environ.get("HA_ONBOARD_NAME", "Dev")
@@ -31,6 +35,10 @@ PASSWORD = os.environ.get("HA_ONBOARD_PASSWORD", "dev")
 LANGUAGE = os.environ.get("HA_ONBOARD_LANGUAGE", "en")
 CALENDAR_NAME = os.environ.get("HA_CALENDAR_NAME", "Heater schedules")
 CLIENT_ID = HA_URL + "/"
+
+# All REST calls go through a _req bound to HA_URL (see deploy/lib/ha_api.py),
+# keeping the terse call sites below.
+_req = bind(HA_URL)
 
 # Placeholder home location (Minneapolis, MN — cold enough to need block heaters,
 # and consistent with the TZ=America/Chicago the dev stack sets). Only applied
@@ -44,24 +52,6 @@ HOME_ELEVATION = float(os.environ.get("HA_ELEVATION", "265"))
 # geolocate — treated as "unset" so we know it's safe to drop in the placeholder.
 HA_DEFAULT_LATITUDE = 32.87336
 HA_DEFAULT_LONGITUDE = -117.22743
-
-
-def _req(method, path, data=None, token=None, form=False):
-    headers = {}
-    body = None
-    if data is not None:
-        if form:
-            body = urllib.parse.urlencode(data).encode()
-            headers["Content-Type"] = "application/x-www-form-urlencoded"
-        else:
-            body = json.dumps(data).encode()
-            headers["Content-Type"] = "application/json"
-    if token:
-        headers["Authorization"] = "Bearer " + token
-    req = urllib.request.Request(HA_URL + path, data=body, headers=headers, method=method)
-    with urllib.request.urlopen(req) as r:
-        raw = r.read().decode()
-        return json.loads(raw) if raw else {}
 
 
 def wait_for_ha(timeout=180):
@@ -278,7 +268,7 @@ def _safe(step, fn, *args):
     transient 400 on cold boot) can't abort the rest of provisioning."""
     try:
         return fn(*args)
-    except Exception as e:  # noqa: BLE001 — best-effort dev provisioning
+    except Exception as e:  # noqa: BLE001 — best-effort provisioning
         print(f"[setup] {step} failed ({type(e).__name__}: {e}); continuing")
         return None
 

@@ -11,17 +11,20 @@ so nothing is hardcoded.
 - **`Dockerfile`** — extends the official HA image; at build time downloads
   `auth_oidc` and applies `../homeassistant/patches/` to it, and bakes the
   reference config into `/opt/provision`. Build context is the **repo root**
-  (so it can COPY from both `homeassistant/` and `ha-dev/`).
+  (so it can COPY from `homeassistant/`, `ha-dev/`, and `deploy/lib/`).
 - **`docker-entrypoint.sh`** — the image ENTRYPOINT. Stages `/config` from
   `/opt/provision`, renders the env-driven includes, optionally stages
   packages/blueprints (`HC_STAGE_CONFIG=1`) and self-onboards (`HC_AUTO_SETUP=1`),
   then launches Home Assistant **directly** (bypassing the base image's s6 init,
   which requires PID 1 — unavailable on Fly's managed-init Machines).
-- **`render_config.py`** — writes `/config/http.yaml` + `/config/auth_oidc.yaml`
-  from env (`OIDC_*`, `HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …), plus the
-  Fly-only keepalive package when `HC_KEEPALIVE_URL` is set.
-- **`setup.py`** — drives HA's REST API to onboard the owner and create the
-  `local_calendar` the scheduling package needs. Idempotent; usable standalone.
+- **provisioning logic** lives in [`../deploy/lib/`](../deploy/lib/), shared with
+  the HAOS deploy toolkit and baked into the image at `/opt/provision/lib`:
+  - **`render_config.py`** — writes `/config/http.yaml` + `/config/auth_oidc.yaml`
+    from env (`OIDC_*`, `HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …).
+  - **`provision.py`** (formerly `setup.py`) — drives HA's REST API to onboard
+    the owner and create the `local_calendar` the scheduling package needs.
+    Idempotent; usable standalone.
+  - **`ha_api.py`** — the stdlib REST helper both of the above share.
 - **`docker-compose.yml`** — the single-service local dev stack.
 - **`fly.toml`** — the scale-to-zero Fly demo (small persistent `/config` volume).
 

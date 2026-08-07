@@ -1,7 +1,9 @@
 # HAOS provisioning & deploy — plan
 
-Status: **proposal, not yet built.** This is the written plan for automating the
-production HAOS box. Reviewed before scaffolding `deploy/`.
+Status: **built.** The toolkit described here now lives in `deploy/` — see
+[`README.md`](README.md) for operator usage. This file is the design record.
+Not yet exercised against a real HAOS box: the SSH/rsync push path and the
+Supervisor add-on install await first hardware.
 
 ## The reframe
 
@@ -49,31 +51,36 @@ source of truth, no fork.
 These stay manual no matter what; everything else is scripted.
 
 1. Flash HAOS, boot it, get it on the network (find its IP / `homeassistant.local`).
-2. Choose + configure **public exposure**: Nabu Casa subscription, _or_ reverse
+2. Mint a long-lived token (one UI click) — the Supervisor API can't be scripted
+   from outside (see Goal 1), so the token is created by hand.
+3. Install the **SSH add-on** once via the UI (the transport `push.sh` rides on;
+   see Goal 1 for why this can't be scripted).
+4. Choose + configure **public exposure**: Nabu Casa subscription, _or_ reverse
    proxy + DDNS + TLS, _or_ Tailscale. (Account/DNS work.)
-3. Physical heater pairing when a real metering switch replaces `input_boolean`
+5. Physical heater pairing when a real metering switch replaces `input_boolean`
    (Z-Wave/Zigbee/WiFi device join) — belongs to "add heaters," see below.
 
-Everything after step 1 (onboarding, add-on install, token mint, config push)
-is driven by `bootstrap.sh`.
+Onboarding and the config push (steps in between) are driven by `bootstrap.sh`.
 
 ## Goal 1 — Initial setup (`bootstrap.sh`)
 
 Given `HA_URL` reachable on the LAN:
 
 1. Run `provision.py` against `HA_URL` → owner account + `core_config` +
-   `analytics` + `integration` onboarding steps; capture the resulting token.
-2. Mint a **long-lived token** from that session (`/auth/long_lived_access_token`)
-   and print it — operator stores it as `HA_TOKEN` (local `.env`) and as the CI
-   repo secret.
-3. Install the SSH add-on via Supervisor API:
-   `POST /api/hassio/addons/{slug}/install` → set options (authorized_keys) →
-   `.../start`. (Slug TBD — verify official `core_ssh` vs community
-   `a0d7b954_ssh`; the community "Advanced SSH & Web Terminal" also exposes a
-   host shell, which is handy.)
-4. `provision.py` remainder: `local_calendar`, home location, met weather,
-   automation reload (already idempotent).
-5. Hand off to `push.sh` for the first config push.
+   `analytics` + `integration` onboarding steps, then `local_calendar`, home
+   location, met weather, automation reload (all idempotent).
+2. Operator mints a **long-lived token** in the UI (Profile → Security) once and
+   puts it in `.env` as `HA_TOKEN` (+ the CI repo secret). _We do not mint it
+   programmatically — that's a WebSocket-only command and not worth a ws client._
+3. **Install the SSH add-on manually via the UI** (one-time). ⚠️ **Discovered on
+   first hardware:** the Supervisor API (`/api/hassio/*`) **rejects HA long-lived
+   access tokens** — verified `/api/ → 200`, `/api/hassio/… → 401`. It expects an
+   add-on's `SUPERVISOR_TOKEN`, so add-on install can't be scripted from outside.
+   Since the SSH add-on _is_ the transport everything else rides on, installing it
+   by hand is the honest bootstrap. Use **Advanced SSH & Web Terminal** with
+   `rsync` added under `packages` and your key under `authorized_keys`.
+4. `bootstrap.sh` checks SSH reachability; when it works, hands off to `push.sh`
+   for the first config push (`--render-config --restart`).
 
 Optional accelerator (not the default): a **golden partial backup** (`.tar`
 restorable via `ha backups` / Supervisor API) collapses steps 1–4 into one
@@ -151,18 +158,19 @@ Extend the existing GitHub Actions (alongside `build-test.yml` and
 6. **Docs**: write `deploy/README.md`, replace `homeassistant/README.md:52-56`
    "HAOS: TBD" with a pointer, update `DEPLOY.md` section 1.
 
-## Open decisions (need answers before/while building)
+## Decisions (resolved)
 
-- **Transport for CI → box:** Tailscale SSH (recommended) vs Nabu Casa API vs
-  exposed reverse-proxy SSH.
-- **SSH add-on:** official `core_ssh` vs community Advanced SSH & Web Terminal
-  (the latter gives a host shell — verify which slug + whether host shell is
-  wanted).
-- **Golden backup:** document as a rebuild shortcut, or skip entirely?
-- **Language:** shell wrappers calling Python `lib/` (matches existing `.py`
-  tooling) vs a single Python CLI vs a pnpm/TS task (matches the JS monorepo).
-  Leaning shell + Python to reuse `setup.py` directly.
-
-```
-
-```
+- **Transport:** SSH throughout. Local SSH (LAN) while setting up; **Tailscale**
+  SSH once deployed. HA ships a first-party
+  [Tailscale add-on](https://www.home-assistant.io/integrations/tailscale/), so
+  the box joins the tailnet without a separate reverse proxy — CI connects over
+  the tailnet with no inbound ports.
+- **Language:** shell wrappers calling Python `lib/`, reusing `setup.py` directly.
+- **Golden backup:** skipped for now.
+- **SSH add-on:** **Advanced SSH & Web Terminal**, installed by hand (the
+  Supervisor API 401s user tokens — see Goal 1). Needs `rsync` added under its
+  `packages` option. `bootstrap.sh` no longer attempts a programmatic install; it
+  checks SSH reachability and prints install instructions if it's not up.
+- **`REMOTE_CONFIG`:** configurable in `.env` — recent SSH add-ons mount HA's
+  config at `/homeassistant`, older/`core_ssh` at `/config`. Confirm on the box
+  and set accordingly.

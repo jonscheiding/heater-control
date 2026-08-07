@@ -2,7 +2,7 @@
 #
 # Environment-specific settings (OIDC issuer, CORS, trusted proxies) are NOT
 # hardcoded here — they are rendered at container start into http.yaml and
-# auth_oidc.yaml from environment variables (see ha-dev/render_config.py), so the
+# auth_oidc.yaml from environment variables (see deploy/lib/render_config.py), so the
 # same config serves local dev (host proxy over http) and the Fly demo (proxy
 # over https). On a plain HAOS box, create those two files by hand.
 #

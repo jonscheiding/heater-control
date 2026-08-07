@@ -27,7 +27,7 @@ cp -r "$SRC/custom_components/auth_oidc" "$CONFIG/custom_components/auth_oidc"
 cp "$SRC/configuration.yaml" "$CONFIG/configuration.yaml"
 
 # Env-driven includes (OIDC + http).
-python3 "$SRC/render_config.py"
+python3 "$SRC/lib/render_config.py"
 
 # Full config staging for volume-less / no-bind-mount deploys (Fly). In dev,
 # packages/ and blueprints/ are bind-mounted, so this stays off.
@@ -43,7 +43,7 @@ fi
 # HAOS box (flag unset) so onboarding is done once, by hand, with real creds.
 if [ "${HC_AUTO_SETUP:-0}" = "1" ]; then
   echo "[entrypoint] auto-setup enabled; onboarding will run once HA is up"
-  HA_URL="${HA_URL:-http://localhost:8123}" python3 "$SRC/setup.py" &
+  HA_URL="${HA_URL:-http://localhost:8123}" python3 "$SRC/lib/provision.py" &
 fi
 
 # Launch Home Assistant directly, bypassing the base image's s6 init. s6 insists

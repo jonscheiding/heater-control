@@ -13,7 +13,7 @@ demo.
   dir, and two **environment-rendered includes**: `http: !include http.yaml` and
   `auth_oidc: !include auth_oidc.yaml`. Those two files are **not tracked** —
   they're generated at container start from env vars by
-  `../ha-dev/render_config.py` (so the OIDC issuer, CORS origins, and reverse-proxy
+  `../deploy/lib/render_config.py` (so the OIDC issuer, CORS origins, and reverse-proxy
   trust differ per environment without editing this file). On a plain HAOS box,
   create `http.yaml` and `auth_oidc.yaml` by hand.
 - `packages/` — one YAML file per heater. Each bundles its `input_boolean` (or
@@ -49,8 +49,10 @@ automatically; the SPA picks them up via WebSocket without any code change.
 ## Running / deploying
 
 - **Local dev + Fly demo:** see [`../ha-dev/README.md`](../ha-dev/README.md).
-- **HAOS (eventual real deployment):** TBD. HAOS is a locked appliance with no
-  `docker`/host shell, so `/config` is reachable only via add-ons. Leading option:
-  a deploy script that `rsync`s this directory into `/config` over the SSH add-on,
-  hand-creates `http.yaml`/`auth_oidc.yaml`, reapplies `patches/`, then triggers
-  `homeassistant.reload_all` (or a restart) via the REST API.
+- **HAOS (real deployment):** see [`../deploy/`](../deploy/). Because HAOS is a
+  locked appliance (no `docker`/host shell, `/config` only reachable via add-ons),
+  the deploy toolkit `rsync`s this directory into `/config` over the SSH add-on,
+  renders `http.yaml`/`auth_oidc.yaml` from env, ships the patched `auth_oidc`,
+  and triggers `homeassistant.reload_all` or a core restart via the REST API —
+  reusing the same `deploy/lib/` provisioning modules the container does.
+  `deploy/bootstrap.sh` handles first-run onboarding + add-on install.

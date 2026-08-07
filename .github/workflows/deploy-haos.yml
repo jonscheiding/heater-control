@@ -1,0 +1,74 @@
+name: Deploy to HAOS
+
+# Push the tracked HA config to the prod HAOS box on merge to main. Reaches the
+# box over Tailscale (no inbound ports); deploy/push.sh rsyncs config over the
+# SSH add-on and reloads or restarts as needed.
+#
+# Required repo secrets:
+#   HAOS_HA_URL       HA base URL (over the tailnet or its public URL)
+#   HAOS_HA_TOKEN     long-lived access token (for reload/restart + config check)
+#   HAOS_SSH_TARGET   rsync target, e.g. root@haos  (the box's MagicDNS name)
+#   HAOS_SSH_KEY      private key authorized on the SSH add-on
+#   TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET   Tailscale OAuth client (scope: devices)
+# The tailnet ACL must let tag:ci reach the box's SSH port. This job does not
+# render http.yaml/auth_oidc.yaml — run `deploy/push.sh --render-config` by hand
+# when OIDC/CORS settings change (keeps OIDC secrets out of CI).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "homeassistant/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-haos.yml"
+  workflow_dispatch:
+
+# Never let two deploys race onto the same box.
+concurrency:
+  group: deploy-haos
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Fail loudly if secrets are missing rather than half-deploying.
+      - name: Verify deploy secrets are configured
+        env:
+          HA_URL: ${{ secrets.HAOS_HA_URL }}
+          HA_TOKEN: ${{ secrets.HAOS_HA_TOKEN }}
+          SSH_TARGET: ${{ secrets.HAOS_SSH_TARGET }}
+          SSH_KEY: ${{ secrets.HAOS_SSH_KEY }}
+        run: |
+          for v in HA_URL HA_TOKEN SSH_TARGET SSH_KEY; do
+            if [ -z "${!v}" ]; then
+              echo "::error::secret $v is not set; cannot deploy."
+              exit 1
+            fi
+          done
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.HAOS_SSH_KEY }}" > ~/.ssh/haos
+          chmod 600 ~/.ssh/haos
+
+      - name: Push config to HAOS
+        env:
+          HA_URL: ${{ secrets.HAOS_HA_URL }}
+          HA_TOKEN: ${{ secrets.HAOS_HA_TOKEN }}
+          SSH_TARGET: ${{ secrets.HAOS_SSH_TARGET }}
+          SSH_PORT: ${{ vars.HAOS_SSH_PORT || '22' }}
+          # Advanced SSH & Web Terminal mounts HA config at /homeassistant.
+          REMOTE_CONFIG: ${{ vars.HAOS_REMOTE_CONFIG || '/homeassistant' }}
+        run: |
+          export SSH_OPTS="-i $HOME/.ssh/haos -o StrictHostKeyChecking=accept-new"
+          deploy/push.sh

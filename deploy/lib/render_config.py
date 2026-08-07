@@ -8,11 +8,19 @@ settings. ``configuration.yaml`` pulls these in via ``!include``. Also renders
 the Fly-only keepalive package into ``<config>/packages/`` when
 ``HC_KEEPALIVE_URL`` is set.
 
-PyYAML ships with Home Assistant core, so ``import yaml`` is always available.
+Serialization: PyYAML ships with Home Assistant core, so inside the container we
+use it. But this module is shared with the deploy toolkit, which runs on an
+operator's laptop / CI runner where PyYAML may be absent — so we fall back to a
+tiny built-in emitter there. The fallback only needs to handle the flat include
+structures (http/auth_oidc); the nested keepalive package is only ever rendered
+inside the container, where PyYAML is present.
 """
 import os
 
-import yaml
+try:
+    import yaml
+except ModuleNotFoundError:  # operator laptop / CI without PyYAML
+    yaml = None
 
 CONFIG = os.environ.get("HA_CONFIG_DIR", "/config")
 
@@ -52,16 +60,18 @@ def render_auth_oidc():
 
 
 def render_http():
-    """http block. cors always; reverse-proxy trust only when enabled."""
+    """http block. cors always; reverse-proxy trust only when BOTH the flag and
+    trusted_proxies are set. HA requires use_x_forwarded_for and trusted_proxies
+    together (one inclusion group), so emitting the flag alone is invalid config
+    ("some but not all values in the same group of inclusion 'proxy'")."""
     block = {}
     origins = _list("HA_CORS_ORIGINS")
     if origins:
         block["cors_allowed_origins"] = origins
-    if _bool("HA_USE_X_FORWARDED_FOR", False):
+    proxies = _list("HA_TRUSTED_PROXIES")
+    if _bool("HA_USE_X_FORWARDED_FOR", False) and proxies:
         block["use_x_forwarded_for"] = True
-        proxies = _list("HA_TRUSTED_PROXIES")
-        if proxies:
-            block["trusted_proxies"] = proxies
+        block["trusted_proxies"] = proxies
     return block
 
 
@@ -98,11 +108,47 @@ def render_keepalive(url):
     }
 
 
+def _scalar(v):
+    """Serialize a scalar for the fallback emitter. Bools as YAML true/false;
+    everything else double-quoted + escaped (always valid, HA parses it fine)."""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    s = str(v).replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{s}"'
+
+
+def _emit(data, indent=0):
+    """Minimal block-YAML for dicts, nested dicts, and lists of scalars — enough
+    for http.yaml / auth_oidc.yaml. Refuses nested collections (only the keepalive
+    package needs those, and it's rendered only where PyYAML is present)."""
+    lines = []
+    pad = " " * indent
+    for key, val in data.items():
+        if isinstance(val, dict):
+            lines.append(f"{pad}{key}:")
+            lines += _emit(val, indent + 2)
+        elif isinstance(val, list):
+            lines.append(f"{pad}{key}:")
+            for item in val:
+                if isinstance(item, (dict, list)):
+                    raise TypeError("fallback emitter can't serialize nested collections; PyYAML required")
+                lines.append(f"{pad}- {_scalar(item)}")
+        else:
+            lines.append(f"{pad}{key}: {_scalar(val)}")
+    return lines
+
+
+def _dump(data):
+    if yaml is not None:
+        return yaml.safe_dump(data, default_flow_style=False, sort_keys=False)
+    return ("\n".join(_emit(data)) + "\n") if data else "{}\n"
+
+
 def _write(name, data):
     path = os.path.join(CONFIG, name)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
-        yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
+        f.write(_dump(data))
     print(f"[render-config] wrote {path}")
 
 
