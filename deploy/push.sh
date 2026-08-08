@@ -1,33 +1,15 @@
 #!/usr/bin/env bash
-# Push config updates to the (hand-provisioned) prod HAOS box over SSH, then
-# apply them with the lightest action.
+# Push config to the prod HAOS box over SSH, then apply the lightest action.
+# Full workflow + config in deploy/README.md and deploy/.env.example.
 #
 #   deploy/push.sh [--dry-run] [--no-apply] [--oidc] [--calendar]
 #
-# Default scope — the config that iterates:
-#   • packages/ (heaters + their automations) and the heater_control blueprint
-#   • repo-tracked custom_components/ (e.g. the schedulemaster integration)
+#   (default)   packages/ + heater_control blueprint + repo custom_components/
+#   --oidc      patched auth_oidc component + rendered auth_oidc.yaml + secrets.yaml
+#   --calendar  ensure the "Heater schedules" local_calendar (calendar.heater_schedules)
 #
-# --oidc — the set-once OIDC bundle (run at setup, or to bump the pinned version
-# / rotate the secret):
-#   • materialize the pinned + PATCHED auth_oidc component and ship it (the patch
-#     is the "Continue on this device" fix in homeassistant/patches/)
-#   • render auth_oidc.yaml from .env and ship it (you keep the
-#     `auth_oidc: !include auth_oidc.yaml` line in configuration.yaml by hand)
-#   • upsert sm_oidc_client_secret into the box's secrets.yaml (auth_oidc.yaml
-#     references it via !secret), preserving your other secrets
-# (HTTP/CORS + reverse-proxy trust are set in the HA UI — 2026.8+ — not here.)
-#
-# --calendar — ensure the "Heater schedules" local_calendar config entry exists
-# (entity calendar.heater_schedules, which the scheduling package + SPA hard-code).
-# One-time, idempotent; a config entry, not YAML, so it can't live in a package.
-#
-# Apply action, from what changed: YAML (packages/blueprints) -> reload_all (hot);
-# custom_components / includes / secret -> core restart (gated on a config check);
-# nothing -> no-op. The box's other set-once pieces (onboarding, add-ons,
-# configuration.yaml itself) stay by-hand.
-#
-# Config via deploy/.env (see .env.example).
+# Apply action: YAML -> reload_all (hot); custom_components / includes / secret ->
+# core restart (gated on a config check); nothing -> no-op.
 set -euo pipefail
 
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -101,8 +83,7 @@ PY
   cp -R "$REPO_ROOT/homeassistant/patches/auth_oidc/." "$dest/"
 }
 
-# Preflight: fail clearly on a bad token/URL before doing anything. Probes core
-# /api/; the Supervisor proxy is not used.
+# Preflight: fail clearly on a bad token/URL before doing anything.
 code="$(curl -s -o /dev/null -w '%{http_code}' \
   -H "Authorization: Bearer ${HA_TOKEN}" "${HA_URL%/}/api/" 2>/dev/null)" ||
   die "can't reach HA at ${HA_URL} (connection failed — check HA_URL / network / Tailscale)"
@@ -154,9 +135,7 @@ sync() {
 manage_oidc_secret() {
   local key="sm_oidc_client_secret" cur new
   cur="$(ssh_run "cat '$REMOTE_CONFIG/secrets.yaml' 2>/dev/null || true")"
-  # Pass the current file via env, not stdin: `python3 - <<'PY'` already consumes
-  # stdin for the program, so a piped-in secrets.yaml would be lost (and we'd
-  # clobber the user's other secrets).
+  # Current file goes via env, not stdin — the heredoc already owns program stdin.
   new="$(CUR="$cur" SECRET_KEY="$key" SECRET_VAL="$OIDC_CLIENT_SECRET" python3 - <<'PY'
 import os, sys
 key, val = os.environ["SECRET_KEY"], os.environ["SECRET_VAL"]

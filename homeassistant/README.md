@@ -2,15 +2,16 @@
 
 Declarative HA config, tracked alongside the SPA. This directory is **pure
 reference config** — what a Home Assistant `/config` should contain — and is the
-source of truth for both the containerized dev/demo image and the eventual HAOS
-box. The tooling that builds and runs a container of this config lives in
+source of truth for both the containerized dev/demo image and the HAOS box. The
+tooling that builds and runs a container of this config lives in
 [`../ha-dev/`](../ha-dev/); see its README to run the dev stack or deploy the Fly
 demo.
 
 ## Layout
 
-- `configuration.yaml` — top-level config. Loads `default_config`, the packages
-  dir, and two **environment-rendered includes**: `http: !include http.yaml` and
+- `configuration.yaml` — top-level config. Enables only what the app needs
+  (deliberately no `default_config`, for a faster boot), the packages dir, and two
+  **environment-rendered includes**: `http: !include http.yaml` and
   `auth_oidc: !include auth_oidc.yaml`. Those two files are **not tracked** —
   they're generated at container start from env vars by
   `../ha-dev/render_config.py` (so the OIDC issuer, CORS origins, and reverse-proxy
@@ -31,13 +32,14 @@ demo.
 
 ## Adding a new heater
 
-1. Copy `packages/heater_1.yaml` to `packages/heater_<n>.yaml`.
-2. Find/replace `heater_1` with `heater_<n>`.
-3. Adjust `duration` if this heater needs a different auto-off window.
-4. Rebuild/redeploy (or reload-YAML in HA).
+```bash
+deploy/heater.sh add --n 4 --name "Cessna 172" --duration 3h
+```
 
-The new entities (`input_boolean.heater_<n>`, `timer.heater_<n>_autooff`) appear
-automatically; the SPA picks them up via WebSocket without any code change.
+Scaffolds `packages/heater_<n>.yaml` from the `heater_1.yaml` template. Then
+`deploy/push.sh` (prod) or `up --build` / a YAML reload (dev) loads it. The new
+entities (`input_boolean.heater_<n>`, `timer.heater_<n>_autooff`) appear
+automatically; the SPA picks them up via WebSocket with no code change.
 
 ## What does NOT live here
 

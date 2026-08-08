@@ -2,16 +2,9 @@
 """Render the prod HAOS box's auth_oidc.yaml include from deploy/.env.
 
 Called by push.sh --oidc into a staging dir (HA_CONFIG_DIR). Emits YAML text
-directly — stdlib only (no PyYAML on the operator's machine), and so HA's
-``!secret`` tag survives verbatim rather than being quoted into a plain string.
-
-Unlike the container's ha-dev/render_config.py (which inlines the secret), the
-prod auth_oidc.yaml references the client secret via ``!secret``, so the value
-lives in the box's secrets.yaml (push.sh upserts it there). configuration.yaml on
-the box pulls the file in by hand:  auth_oidc: !include auth_oidc.yaml.
-
-(HTTP settings — CORS, reverse-proxy trust — are NOT rendered here: HA 2026.8+
-configures them in the UI, so they're a manual step on the box. See deploy/README.md.)
+directly (stdlib only, no PyYAML) so the ``!secret`` tag survives verbatim. The
+client secret is a ``!secret`` reference; push.sh writes its value to the box's
+secrets.yaml. HTTP/CORS settings live in the HA UI, not here.
 """
 import os
 
