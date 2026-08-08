@@ -15,6 +15,10 @@ if (dsn) {
   Sentry.init({
     dsn,
     environment: process.env["SENTRY_ENVIRONMENT"] ?? "production",
+    integrations: [
+      Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
+    ],
+    enableLogs: true,
     // Error reporting only — we don't need performance tracing for a
     // login-only service.
     tracesSampleRate: 0,
