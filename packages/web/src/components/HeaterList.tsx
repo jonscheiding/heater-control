@@ -29,6 +29,15 @@ interface Props {
   username: string;
 }
 
+function byName(
+  a: { entity_id: string; attributes: { friendly_name?: string } },
+  b: { entity_id: string; attributes: { friendly_name?: string } },
+) {
+  const nameA = a.attributes.friendly_name ?? a.entity_id;
+  const nameB = b.attributes.friendly_name ?? b.entity_id;
+  return nameA.localeCompare(nameB);
+}
+
 export function HeaterList({ connection, entities, username }: Props) {
   const now = useNow(1000);
   const heaters = getHeaters(entities);
@@ -66,7 +75,7 @@ export function HeaterList({ connection, entities, username }: Props) {
     <>
       <WeatherBadge forecast={forecast} now={now} />
       <ul className={styles.list}>
-        {heaters.map((h) => {
+        {heaters.sort(byName).map((h) => {
           const isOn = h.state === "on";
           const name = h.attributes.friendly_name ?? h.entity_id;
           const heaterSchedules = schedules.filter(

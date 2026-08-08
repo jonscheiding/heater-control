@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Scaffold a new heater package from the canonical heater_1.yaml template.
+# Scaffold a new heater package from the canonical heater.yaml.tml template.
 #
 #   deploy/heater.sh add --n 4 --name "Cessna 172" [--duration 3h]
 #
@@ -16,7 +16,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PKG_DIR="$REPO_ROOT/homeassistant/packages"
-TEMPLATE="$PKG_DIR/heater_1.yaml"
+TEMPLATE="$PKG_DIR/heater.yaml.tmpl"
 
 die() {
   echo "error: $*" >&2
@@ -72,7 +72,6 @@ done
 [ -n "$NAME" ] || usage
 [[ "$N" =~ ^[0-9]+$ ]] || die "--n must be a positive integer (got '$N')"
 [ "$N" -ge 1 ] || die "--n must be >= 1"
-[ "$N" -ne 1 ] || die "heater_1 is the template — pick a different number"
 [ -f "$TEMPLATE" ] || die "template not found: $TEMPLATE"
 
 HMS=""

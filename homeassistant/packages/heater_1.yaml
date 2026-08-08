@@ -1,6 +1,6 @@
 input_boolean:
   heater_1:
-    name: "Heater 1"
+    name: "C182 N3537C"
     icon: mdi:radiator
 
 timer:
@@ -9,7 +9,7 @@ timer:
     restore: true
 
 automation:
-  - alias: "Heater 1: auto-off wiring"
+  - alias: "C182 N3537C: auto-off wiring"
     use_blueprint:
       path: heater_control/switch_with_auto_off.yaml
       input:
@@ -23,7 +23,7 @@ automation:
 
 input_number:
   heater_1_simulated_watts:
-    name: "Heater 1 simulated wattage"
+    name: "C182 N3537C simulated wattage"
     min: 0
     max: 2000
     step: 100
@@ -33,7 +33,7 @@ input_number:
 
 template:
   - sensor:
-      - name: "Heater 1 power"
+      - name: "C182 N3537C power"
         unique_id: heater_1_power
         unit_of_measurement: "W"
         device_class: power

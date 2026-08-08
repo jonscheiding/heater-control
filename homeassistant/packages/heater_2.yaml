@@ -1,6 +1,6 @@
 input_boolean:
   heater_2:
-    name: "Heater 2"
+    name: "C172 N555FN"
     icon: mdi:radiator
 
 timer:
@@ -9,7 +9,7 @@ timer:
     restore: true
 
 automation:
-  - alias: "Heater 2: auto-off wiring"
+  - alias: "C172 N555FN: auto-off wiring"
     use_blueprint:
       path: heater_control/switch_with_auto_off.yaml
       input:
@@ -23,17 +23,17 @@ automation:
 
 input_number:
   heater_2_simulated_watts:
-    name: "Heater 2 simulated wattage"
+    name: "C172 N555FN simulated wattage"
     min: 0
     max: 2000
     step: 100
-    initial: 0
+    initial: 1200
     unit_of_measurement: "W"
     icon: mdi:flash
 
 template:
   - sensor:
-      - name: "Heater 2 power"
+      - name: "C172 N555FN power"
         unique_id: heater_2_power
         unit_of_measurement: "W"
         device_class: power
