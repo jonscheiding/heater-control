@@ -118,10 +118,10 @@ entirely via env vars (see `oidc-proxy/.env.example`).
    Docker host reusing its Tailscale/reverse-proxy exposure.
 4. **Point HA at it**: set the proxy's discovery URL + client credentials in
    `deploy/.env` (`OIDC_*`) and run `deploy/push.sh --oidc`, which renders
-   `auth_oidc.yaml`/`http.yaml`, ships the patched `auth_oidc` component, and
-   writes `sm_oidc_client_secret` to the box's `secrets.yaml`. Add the
-   `auth_oidc: !include auth_oidc.yaml` / `http: !include http.yaml` lines to
-   `configuration.yaml` once, by hand. (See [`deploy/README.md`](deploy/README.md).)
+   `auth_oidc.yaml`, ships the patched `auth_oidc` component, and writes
+   `sm_oidc_client_secret` to the box's `secrets.yaml`. Add the
+   `auth_oidc: !include auth_oidc.yaml` line to `configuration.yaml` once, by hand,
+   and set CORS (the SPA origin) in the HA UI. (See [`deploy/README.md`](deploy/README.md).)
 5. **Guard against site drift**: run the live smoke tests periodically —
    `SM_TEST_USERNAME=… SM_TEST_PASSWORD=… pnpm --filter @heater-control/sm-client test:smoke`
    — to catch ScheduleMaster login-flow changes before pilots do (wire into a scheduled CI

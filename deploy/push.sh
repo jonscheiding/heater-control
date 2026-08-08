@@ -9,14 +9,14 @@
 #   • repo-tracked custom_components/ (e.g. the schedulemaster integration)
 #
 # --oidc — the set-once OIDC bundle (run at setup, or to bump the pinned version
-# / rotate the secret / change CORS):
+# / rotate the secret):
 #   • materialize the pinned + PATCHED auth_oidc component and ship it (the patch
 #     is the "Continue on this device" fix in homeassistant/patches/)
-#   • render auth_oidc.yaml + http.yaml from .env and ship them (you keep the
-#     `auth_oidc: !include auth_oidc.yaml` / `http: !include http.yaml` lines in
-#     configuration.yaml by hand)
+#   • render auth_oidc.yaml from .env and ship it (you keep the
+#     `auth_oidc: !include auth_oidc.yaml` line in configuration.yaml by hand)
 #   • upsert sm_oidc_client_secret into the box's secrets.yaml (auth_oidc.yaml
 #     references it via !secret), preserving your other secrets
+# (HTTP/CORS + reverse-proxy trust are set in the HA UI — 2026.8+ — not here.)
 #
 # --calendar — ensure the "Heater schedules" local_calendar config entry exists
 # (entity calendar.heater_schedules, which the scheduling package + SPA hard-code).
@@ -242,7 +242,6 @@ if [ "$OIDC" -eq 1 ]; then
   if sync "custom_components/auth_oidc" \
     "$STAGE/custom_components/auth_oidc/" "custom_components/auth_oidc/"; then needs_restart=1; fi
   if sync "auth_oidc.yaml" "$STAGE/auth_oidc.yaml" "auth_oidc.yaml"; then needs_restart=1; fi
-  if sync "http.yaml" "$STAGE/http.yaml" "http.yaml"; then needs_restart=1; fi
   if manage_oidc_secret; then needs_restart=1; fi
 fi
 

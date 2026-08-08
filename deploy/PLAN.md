@@ -32,10 +32,10 @@ real hardware made the case for cutting it back to **push-only**:
   token/URL first. Per-dir `--delete`, never at `custom_components/` root, so
   other components on the box are untouched.
 - `push.sh --oidc` — the set-once OIDC bundle: materialize the pinned + patched
-  `auth_oidc` component and ship it; render `auth_oidc.yaml` + `http.yaml`
-  (`render_includes.py`, emitting the client secret as a `!secret` reference);
-  upsert `sm_oidc_client_secret` into the box's `secrets.yaml`; restart. Kept
-  behind a flag so routine pushes don't re-fetch the release.
+  `auth_oidc` component and ship it; render `auth_oidc.yaml` (`render_includes.py`,
+  emitting the client secret as a `!secret` reference); upsert
+  `sm_oidc_client_secret` into the box's `secrets.yaml`; restart. Kept behind a
+  flag so routine pushes don't re-fetch the release.
 - `push.sh --calendar` — ensure the `local_calendar` config entry named "Heater
   schedules" exists (entity `calendar.heater_schedules`, hard-coded by the
   scheduling package + SPA), via the config-entries flow like `ha-dev/setup.py`.
@@ -56,6 +56,11 @@ is a separate `deploy/render_includes.py` — the container inlines the OIDC sec
 
 ## Out of scope by design
 
-- **`configuration.yaml` itself:** edited by hand on the box — the `!include`
-  lines are added once, and a mistake in the top-level config can take HA down.
+- **`configuration.yaml` itself:** edited by hand on the box — the `auth_oidc`
+  `!include` line is added once, and a mistake in the top-level config can take
+  HA down.
+- **HTTP settings (CORS, reverse-proxy trust):** HA 2026.8+ moved the `http`
+  integration to the UI, so these are a manual step on the box (see the README's
+  manual checklist), no longer rendered/pushed. (The `ha-dev` container still
+  renders `http.yaml` — it's HA Container, self-provisioned with no UI step.)
 - **Golden backups / programmatic onboarding:** dropped.

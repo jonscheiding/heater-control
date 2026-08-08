@@ -14,8 +14,9 @@ demo.
   `auth_oidc: !include auth_oidc.yaml`. Those two files are **not tracked** —
   they're generated at container start from env vars by
   `../ha-dev/render_config.py` (so the OIDC issuer, CORS origins, and reverse-proxy
-  trust differ per environment without editing this file). On a plain HAOS box,
-  create `http.yaml` and `auth_oidc.yaml` by hand.
+  trust differ per environment without editing this file). This layout is for the
+  **container**; on a prod HAOS box `deploy/push.sh --oidc` renders `auth_oidc.yaml`
+  and HTTP/CORS is configured in the UI (2026.8+), so `http.yaml` isn't used there.
 - `packages/` — one YAML file per heater. Each bundles its `input_boolean` (or
   eventual `switch`), `timer`, and the auto-off wiring automation. Enabled via
   `homeassistant: packages: !include_dir_named packages` in `configuration.yaml`.
@@ -49,10 +50,10 @@ automatically; the SPA picks them up via WebSocket without any code change.
 
 - **Local dev + Fly demo:** see [`../ha-dev/README.md`](../ha-dev/README.md).
 - **HAOS (real deployment):** the box is **provisioned by hand** (onboarding,
-  add-ons, and `configuration.yaml` — where you keep the `auth_oidc`/`http`
-  `!include` lines). [`../deploy/`](../deploy/) then ships the iterating config
-  via `deploy/push.sh` — `packages/`, the `heater_control` blueprint, and
-  repo-tracked `custom_components/` (reload for YAML, restart for components).
-  `deploy/push.sh --oidc` handles the set-once OIDC bundle: the pinned + patched
-  `auth_oidc` component, the rendered `auth_oidc.yaml`/`http.yaml` includes, and
-  the `sm_oidc_client_secret` in `secrets.yaml`.
+  add-ons, HTTP/CORS settings in the UI, and `configuration.yaml` — where you keep
+  the `auth_oidc: !include auth_oidc.yaml` line). [`../deploy/`](../deploy/) then
+  ships the iterating config via `deploy/push.sh` — `packages/`, the
+  `heater_control` blueprint, and repo-tracked `custom_components/` (reload for
+  YAML, restart for components). `deploy/push.sh --oidc` handles the set-once OIDC
+  bundle: the pinned + patched `auth_oidc` component, the rendered `auth_oidc.yaml`
+  include, and the `sm_oidc_client_secret` in `secrets.yaml`.

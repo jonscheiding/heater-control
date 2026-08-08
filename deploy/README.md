@@ -18,7 +18,7 @@ config, see the container in [`../ha-dev/`](../ha-dev/) instead.
 | -------------------- | ----------------------------------------------------------------------- |
 | `push.sh`            | rsync packages/ + blueprints/ + custom_components/, then reload/restart |
 | `heater.sh`          | scaffold a new `homeassistant/packages/heater_<n>.yaml`                 |
-| `render_includes.py` | render auth_oidc.yaml + http.yaml for `push.sh --oidc`                  |
+| `render_includes.py` | render auth_oidc.yaml for `push.sh --oidc`                              |
 | `.env.example`       | copy to `.env` (gitignored) and fill in                                 |
 
 ## Prerequisites
@@ -39,6 +39,22 @@ $EDITOR deploy/.env   # HA_URL, HA_TOKEN, SSH_TARGET, REMOTE_CONFIG
 `REMOTE_CONFIG` is the dir on the box that already contains `configuration.yaml`
 (varies by add-on: `/root/config`, `/homeassistant`, or `/config` — confirm with
 `ssh <SSH_TARGET> ls config/configuration.yaml`).
+
+## Manual box setup (one-time)
+
+Done by hand on a fresh box; `deploy/` handles everything after:
+
+1. Onboard the owner, install the **SSH add-on** (Advanced SSH & Web Terminal —
+   add `rsync` under `packages`, your key under `authorized_keys`), mint a
+   long-lived token.
+2. **HTTP settings in the UI** — Settings → System → Network (HA 2026.8+ moved the
+   `http` integration here from YAML). Add your **SPA origin** to
+   _Allowed CORS origins_ (else the SPA's cross-origin API calls fail), and set
+   reverse-proxy trust (`use_x_forwarded_for` + trusted proxies) if HA sits behind
+   one. Saving restarts HA and asks you to confirm within 5 min.
+3. Add the auth_oidc include to `configuration.yaml`: `auth_oidc: !include auth_oidc.yaml`.
+4. `deploy/push.sh --oidc` (auth_oidc component + config + secret), then
+   `deploy/push.sh --calendar` (the scheduling calendar). Both idempotent.
 
 ## Add a heater
 
@@ -85,26 +101,22 @@ deleted — `--delete` is scoped inside each dir, never at `custom_components/` 
 deploy/push.sh --oidc        # deploy/refresh the OIDC integration + config
 ```
 
-Run this at setup, or to bump the pinned version / rotate the client secret /
-change CORS. It:
+Run this at setup, or to bump the pinned version / rotate the client secret. It:
 
 - materializes the pinned + **patched** `auth_oidc` component (the patch is the
   "Continue on this device" fix in `homeassistant/patches/`) and ships it,
-- renders `auth_oidc.yaml` + `http.yaml` from `.env` (`OIDC_*`, `HA_CORS_ORIGINS`,
-  `HA_TRUSTED_PROXIES`) and ships them,
+- renders `auth_oidc.yaml` from `.env` (`OIDC_*`) and ships it,
 - upserts `sm_oidc_client_secret` into the box's `secrets.yaml` (auth_oidc.yaml
   references it via `!secret`), preserving your other secrets,
 - restarts (all of the above need it).
 
-**One-time by hand:** add the include lines to the box's `configuration.yaml`:
+**One-time by hand:** add the include line to the box's `configuration.yaml`:
 
 ```yaml
 auth_oidc: !include auth_oidc.yaml
-http: !include http.yaml
 ```
 
-(With the http/CORS scope, `http.yaml` is your full `http:` block — don't also
-define `http:` inline, or HA rejects the duplicate key.)
+(HTTP/CORS is not shipped here — see the manual checklist below.)
 
 ### The calendar (`--calendar`)
 
