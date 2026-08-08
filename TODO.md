@@ -12,7 +12,7 @@
 - [x] refactor for readability
 - [x] clean up deploy files organization (separate `deployment` dir)?
 - [x] GH Actions workflows for periodic tests (weekly?)
-- [ ] minimal automation for live HAOS deployment
+- [x] minimal automation for live HAOS deployment
 
 ## FEATURES
 

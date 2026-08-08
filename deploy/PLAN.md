@@ -36,6 +36,10 @@ real hardware made the case for cutting it back to **push-only**:
   (`render_includes.py`, emitting the client secret as a `!secret` reference);
   upsert `sm_oidc_client_secret` into the box's `secrets.yaml`; restart. Kept
   behind a flag so routine pushes don't re-fetch the release.
+- `push.sh --calendar` — ensure the `local_calendar` config entry named "Heater
+  schedules" exists (entity `calendar.heater_schedules`, hard-coded by the
+  scheduling package + SPA), via the config-entries flow like `ha-dev/setup.py`.
+  A config entry, not YAML, so it can't be a package; idempotent, behind a flag.
 - `heater.sh` — scaffold a new heater package from the `heater_1.yaml` template.
 - CI (`deploy-haos.yml`) — runs the default `push.sh` on merge over Tailscale.
 

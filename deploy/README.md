@@ -106,6 +106,20 @@ http: !include http.yaml
 (With the http/CORS scope, `http.yaml` is your full `http:` block — don't also
 define `http:` inline, or HA rejects the duplicate key.)
 
+### The calendar (`--calendar`)
+
+```bash
+deploy/push.sh --calendar    # ensure the "Heater schedules" local_calendar
+```
+
+Creates the `local_calendar` config entry named **Heater schedules** (→ entity
+`calendar.heater_schedules`) if it's missing, then reloads so the scheduling
+automation attaches. Idempotent (no-op once it exists). This is a config entry,
+not YAML, so it can't live in a package — run this once when standing up a box
+(without it, the scheduling automation and the SPA's calendar view 404, which the
+browser reports as a misleading CORS error). The name must be exactly
+`Heater schedules` — the package and SPA hard-code the resulting entity id.
+
 ## CI
 
 [`.github/workflows/deploy-haos.yml`](../.github/workflows/deploy-haos.yml) runs

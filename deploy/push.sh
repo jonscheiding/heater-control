@@ -2,7 +2,7 @@
 # Push config updates to the (hand-provisioned) prod HAOS box over SSH, then
 # apply them with the lightest action.
 #
-#   deploy/push.sh [--dry-run] [--no-apply] [--oidc]
+#   deploy/push.sh [--dry-run] [--no-apply] [--oidc] [--calendar]
 #
 # Default scope — the config that iterates:
 #   • packages/ (heaters + their automations) and the heater_control blueprint
@@ -17,6 +17,10 @@
 #     configuration.yaml by hand)
 #   • upsert sm_oidc_client_secret into the box's secrets.yaml (auth_oidc.yaml
 #     references it via !secret), preserving your other secrets
+#
+# --calendar — ensure the "Heater schedules" local_calendar config entry exists
+# (entity calendar.heater_schedules, which the scheduling package + SPA hard-code).
+# One-time, idempotent; a config entry, not YAML, so it can't live in a package.
 #
 # Apply action, from what changed: YAML (packages/blueprints) -> reload_all (hot);
 # custom_components / includes / secret -> core restart (gated on a config check);
@@ -47,13 +51,15 @@ fi
 DRYRUN=0
 APPLY=1
 OIDC=0
+CALENDAR=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRYRUN=1 ;;
     --no-apply | --no-reload) APPLY=0 ;; # --no-reload kept as an alias
     --oidc) OIDC=1 ;;
+    --calendar) CALENDAR=1 ;;
     -h | --help)
-      echo "usage: deploy/push.sh [--dry-run] [--no-apply] [--oidc]" >&2
+      echo "usage: deploy/push.sh [--dry-run] [--no-apply] [--oidc] [--calendar]" >&2
       exit 1
       ;;
     *) die "unknown argument: $1" ;;
@@ -180,6 +186,38 @@ PY
   return 0
 }
 
+# Ensure the "Heater schedules" local_calendar exists (entity_id
+# calendar.heater_schedules — the scheduling package and SPA both hard-code it).
+# Idempotent via the config-entries flow, same as ha-dev/setup.py. Returns 0 if it
+# created the calendar (-> reload so the calendar-triggered automation attaches),
+# 1 if already present.
+CALENDAR_NAME="Heater schedules"
+manage_calendar() {
+  local entries flow_id
+  entries="$(ha_curl GET /api/config/config_entries/entry)" || die "couldn't list config entries"
+  if printf '%s' "$entries" | CAL="$CALENDAR_NAME" python3 -c '
+import json, os, sys
+data = json.load(sys.stdin)
+sys.exit(0 if any(e.get("domain") == "local_calendar" and e.get("title") == os.environ["CAL"] for e in data) else 1)
+'; then
+    info "calendar '$CALENDAR_NAME' already present"
+    return 1
+  fi
+  if [ "$DRYRUN" -eq 1 ]; then
+    info "dry-run: would create local_calendar '$CALENDAR_NAME'"
+    return 0
+  fi
+  info "creating local_calendar '$CALENDAR_NAME'"
+  flow_id="$(ha_curl POST /api/config/config_entries/flow '{"handler":"local_calendar","show_advanced_options":false}' |
+    python3 -c 'import json,sys; print(json.load(sys.stdin)["flow_id"])')" ||
+    die "couldn't start local_calendar flow"
+  ha_curl POST "/api/config/config_entries/flow/$flow_id" \
+    "$(CAL="$CALENDAR_NAME" python3 -c 'import json,os; print(json.dumps({"calendar_name": os.environ["CAL"], "import": "create_empty"}))')" \
+    >/dev/null || die "couldn't finish local_calendar flow"
+  info "created '$CALENDAR_NAME' (calendar.heater_schedules)"
+  return 0
+}
+
 needs_reload=0
 needs_restart=0
 
@@ -206,6 +244,11 @@ if [ "$OIDC" -eq 1 ]; then
   if sync "auth_oidc.yaml" "$STAGE/auth_oidc.yaml" "auth_oidc.yaml"; then needs_restart=1; fi
   if sync "http.yaml" "$STAGE/http.yaml" "http.yaml"; then needs_restart=1; fi
   if manage_oidc_secret; then needs_restart=1; fi
+fi
+
+# --- ensure the local_calendar config entry (reload to attach the automation) ---
+if [ "$CALENDAR" -eq 1 ]; then
+  if manage_calendar; then needs_reload=1; fi
 fi
 
 # --- decide action ---
