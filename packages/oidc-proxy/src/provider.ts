@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+import { nanoid } from "nanoid";
 import {
   Provider,
   type ClientMetadata,
@@ -6,6 +8,7 @@ import {
 
 import type { AccountStore } from "./account-store.js";
 import type { ProxyEnvironmentConfig } from "./config.js";
+import { errorPage } from "./views.js";
 
 /**
  * Build the OIDC provider Home Assistant's `auth_oidc` integration talks to.
@@ -53,6 +56,18 @@ export function createProvider(
       url(_ctx, interaction) {
         return `/interaction/${interaction.uid}`;
       },
+    },
+    renderError: (ctx, out, error) => {
+      const id = nanoid();
+
+      Sentry.captureException(error, {
+        attributes: { out, id },
+      });
+
+      ctx.type = "html";
+      ctx.body = errorPage(
+        `Something went wrong: ${out.error ?? "Unknown error"}. Please share this identifier with Operations: ${id}`,
+      );
     },
     findAccount(_ctx, sub) {
       const claims = accounts.get(sub);
