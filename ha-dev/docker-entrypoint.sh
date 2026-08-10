@@ -29,14 +29,15 @@ cp "$SRC/configuration.yaml" "$CONFIG/configuration.yaml"
 # Env-driven includes (OIDC + http).
 python3 "$SRC/render_config.py"
 
-# Full config staging for volume-less / no-bind-mount deploys (Fly). In dev,
-# packages/ and blueprints/ are bind-mounted, so this stays off.
-if [ "${HC_STAGE_CONFIG:-0}" = "1" ]; then
-  echo "[entrypoint] staging packages + blueprints"
-  mkdir -p "$CONFIG/packages" "$CONFIG/blueprints/automation"
-  cp -r "$SRC/packages/." "$CONFIG/packages/"
-  cp -r "$SRC/blueprints/." "$CONFIG/blueprints/"
-fi
+# Packages (scheduling + heaters generated from the roster) and blueprints,
+# staged from the image (the source of truth). Dev bind-mounts the sources over
+# /opt/provision, so `docker compose restart` picks up roster/blueprint edits.
+echo "[entrypoint] staging packages + blueprints"
+mkdir -p "$CONFIG/packages" "$CONFIG/blueprints/automation"
+cp -r "$SRC/packages/." "$CONFIG/packages/"   # static packages (scheduling, ...)
+rm -f "$CONFIG"/packages/heater_*.yaml         # strip baked/stale heaters, then regen
+python3 "$SRC/gen_packages.py" --input "${HEATERS_JSON:-$SRC/heaters.demo.json}" --out "$CONFIG/packages"
+cp -r "$SRC/blueprints/." "$CONFIG/blueprints/"
 
 # Optional self-onboarding (dev + Fly demo). Backgrounded: waits for HA to come
 # up, then onboards the owner + ensures the local calendar. Skipped on the real

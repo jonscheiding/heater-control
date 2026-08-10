@@ -1,9 +1,9 @@
 # Home Assistant configuration (reference)
 
-Declarative HA config, tracked alongside the SPA. This directory is **pure
-reference config** — what a Home Assistant `/config` should contain — and is the
-source of truth for both the containerized dev/demo image and the HAOS box. The
-tooling that builds and runs a container of this config lives in
+Declarative HA config, tracked alongside the SPA — the reference `/config` plus
+the heater roster + generator that renders the per-heater packages. Source of
+truth for both the containerized dev/demo image and the HAOS box. The tooling
+that builds and runs a container of this config lives in
 [`../ha-dev/`](../ha-dev/); see its README to run the dev stack or deploy the Fly
 demo.
 
@@ -18,9 +18,14 @@ demo.
   trust differ per environment without editing this file). This layout is for the
   **container**; on a prod HAOS box `deploy/push.sh --oidc` renders `auth_oidc.yaml`
   and HTTP/CORS is configured in the UI (2026.8+), so `http.yaml` isn't used there.
-- `packages/` — one YAML file per heater. Each bundles its `input_boolean` (or
-  eventual `switch`), `timer`, and the auto-off wiring automation. Enabled via
+- `packages/` — `scheduling.yaml` (calendar-triggered turn-on) plus one
+  **generated** `heater_<id>.yaml` per heater. Enabled via
   `homeassistant: packages: !include_dir_named packages` in `configuration.yaml`.
+- `heaters.demo.json` / `heaters.prod.json` — the heater roster (one per
+  environment), the **source of truth**. `gen_packages.py` renders each entry into
+  a `packages/heater_<id>.yaml` (simulated `input_boolean` + fake power, or a real
+  `switch` + auto-off). The generated files are gitignored; `push.sh` and the
+  container entrypoint regenerate them.
 - `blueprints/automation/heater_control/` — reusable automation templates the
   per-heater packages reference. `switch_with_auto_off` encapsulates the
   timer-start / timer-cancel / timer-finish wiring so each per-heater file stays
@@ -32,19 +37,25 @@ demo.
 
 ## Adding a new heater
 
-```bash
-deploy/heater.sh add --n 4 --name "Cessna 172" --duration 3h
+Add an entry to the roster JSON — `heaters.prod.json` and/or `heaters.demo.json`:
+
+```json
+{ "id": "heater_7", "label": "C172 N123AB", "simulated": true }
 ```
 
-Scaffolds `packages/heater_<n>.yaml` from the `heater_1.yaml` template. Then
-`deploy/push.sh` (prod) or `up --build` / a YAML reload (dev) loads it. The new
-entities (`input_boolean.heater_<n>`, `timer.heater_<n>_autooff`) appear
-automatically; the SPA picks them up via WebSocket with no code change.
+`gen_packages.py` renders it to `packages/heater_7.yaml` at deploy
+(`deploy/push.sh`) / container start. `id` must be `heater_<n>` — the SPA keys off
+`switch.heater_*` / `input_boolean.heater_*`; `label` is the display name.
+Optional: `duration` (`HH:MM:SS`/`3h`/`90m`, default 2h), `simulated_power_initial`.
+For a **real** heater, drop `simulated` — the device provides `switch.<id>` and its
+power sensor, and the package adds only the timer + auto-off. The new entities
+appear automatically; the SPA picks them up over WebSocket with no code change.
 
 ## What does NOT live here
 
 - HA runtime state: `home-assistant_v2.db`, logs, `.storage/`, registry files.
-- The generated `http.yaml` / `auth_oidc.yaml` (rendered at container start).
+- The generated `http.yaml` / `auth_oidc.yaml` and `packages/heater_*.yaml`
+  (rendered from env / the roster; gitignored).
 - UI-created helpers/automations (persist in `.storage/`; recreate them here).
 - Secrets — the OIDC client secret flows via the `OIDC_CLIENT_SECRET` env var.
 

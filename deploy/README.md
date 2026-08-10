@@ -17,9 +17,11 @@ config, see the container in [`../ha-dev/`](../ha-dev/) instead.
 | File                 | What it does                                                            |
 | -------------------- | ----------------------------------------------------------------------- |
 | `push.sh`            | rsync packages/ + blueprints/ + custom_components/, then reload/restart |
-| `heater.sh`          | scaffold a new `homeassistant/packages/heater_<n>.yaml`                 |
 | `render_includes.py` | render auth_oidc.yaml for `push.sh --oidc`                              |
 | `.env.example`       | copy to `.env` (gitignored) and fill in                                 |
+
+(Heaters come from `homeassistant/heaters.prod.json`, rendered by
+`homeassistant/gen_packages.py` — see "Add a heater".)
 
 ## Prerequisites
 
@@ -58,16 +60,19 @@ Done by hand on a fresh box; `deploy/` handles everything after:
 
 ## Add a heater
 
-```bash
-deploy/heater.sh add --n 4 --name "Cessna 172" --duration 3h
-deploy/push.sh
+Edit the roster `homeassistant/heaters.prod.json`, then `deploy/push.sh`
+(regenerates the packages + reloads):
+
+```json
+{ "id": "heater_7", "label": "C172 N123AB", "simulated": true }
 ```
 
-Duration accepts `HH:MM:SS`, `3h`, or `90m` (default: the template's 2h). The new
-`input_boolean`/`timer` appear in HA on reload; the SPA picks them up over
-WebSocket with no code change. For a **real metering switch**, pair the device in
-HA first (manual), then swap `input_boolean.heater_<n>` for the switch entity and
-delete the POC block in the generated file.
+`id` must be `heater_<n>`; `label` is the display name. Optional: `duration`
+(`HH:MM:SS`/`3h`/`90m`, default 2h), `simulated_power_initial`. For a **real**
+heater, pair the device in HA as `switch.<id>`, then drop `simulated`
+(`{ "id": "heater_7", "label": "…" }`) — the package wires the timer + auto-off to
+the device's switch and the device supplies the power sensor. The new entities
+appear on reload; the SPA picks them up over WebSocket with no code change.
 
 ## Push updates
 

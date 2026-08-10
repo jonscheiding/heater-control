@@ -34,6 +34,9 @@ RUN set -eux; \
 COPY homeassistant/configuration.yaml /opt/provision/configuration.yaml
 COPY homeassistant/packages /opt/provision/packages
 COPY homeassistant/blueprints /opt/provision/blueprints
+# Heater roster + generator (entrypoint renders packages from the demo roster).
+COPY homeassistant/heaters.demo.json /opt/provision/heaters.demo.json
+COPY homeassistant/gen_packages.py /opt/provision/gen_packages.py
 
 # Tooling.
 COPY ha-dev/render_config.py /opt/provision/render_config.py

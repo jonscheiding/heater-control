@@ -16,3 +16,6 @@ cdk.context.json
 # Python
 __pycache__/
 *.pyc
+
+# Generated heater packages (source of truth is homeassistant/heaters.*.json)
+homeassistant/packages/heater_*.yaml

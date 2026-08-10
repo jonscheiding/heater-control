@@ -1,0 +1,18 @@
+[
+  {
+    "id": "heater_1",
+    "label": "C182 N3537C",
+    "simulated": true,
+    "simulated_power_initial": 0
+  },
+  { "id": "heater_2", "label": "C172 N555FN", "simulated": true },
+  { "id": "heater_3", "label": "C172 N737GE", "simulated": true },
+  { "id": "heater_4", "label": "C182 N9525D", "simulated": true },
+  { "id": "heater_5", "label": "C206 N206FN", "simulated": true },
+  {
+    "id": "heater_6",
+    "label": "C172 N2FN",
+    "simulated": true,
+    "simulated_power_initial": 0
+  }
+]

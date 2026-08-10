@@ -13,10 +13,11 @@ so nothing is hardcoded.
   reference config into `/opt/provision`. Build context is the **repo root**
   (so it can COPY from both `homeassistant/` and `ha-dev/`).
 - **`docker-entrypoint.sh`** — the image ENTRYPOINT. Stages `/config` from
-  `/opt/provision`, renders the env-driven includes, optionally stages
-  packages/blueprints (`HC_STAGE_CONFIG=1`) and self-onboards (`HC_AUTO_SETUP=1`),
-  then launches Home Assistant **directly** (bypassing the base image's s6 init,
-  which requires PID 1 — unavailable on Fly's managed-init Machines).
+  `/opt/provision`: renders the env-driven includes, generates the heater packages
+  from the roster (`../homeassistant/gen_packages.py`), stages scheduling +
+  blueprints, self-onboards (`HC_AUTO_SETUP=1`), then launches Home Assistant
+  **directly** (bypassing the base image's s6 init, which requires PID 1 —
+  unavailable on Fly's managed-init Machines).
 - **`render_config.py`** — writes `/config/http.yaml` + `/config/auth_oidc.yaml`
   from env (`OIDC_*`, `HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …), plus the
   Fly-only keepalive package when `HC_KEEPALIVE_URL` is set.
@@ -27,17 +28,17 @@ so nothing is hardcoded.
 
 ## Environment variables
 
-| Var                                             | Purpose                                       | Dev                    | Fly demo         |
-| ----------------------------------------------- | --------------------------------------------- | ---------------------- | ---------------- |
-| `OIDC_DISCOVERY_URL`                            | issuer well-known URL                         | host proxy             | `sm-oidc-proxy`  |
-| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`         | HA's client registration                      | `dev-ha-secret`        | `fly secrets`    |
-| `OIDC_DISPLAY_NAME`                             | login button label                            | `ScheduleMaster (dev)` | `ScheduleMaster` |
-| `OIDC_FORCE_HTTPS`                              | https redirect URIs (behind TLS proxy)        | `false`                | `true`           |
-| `HA_CORS_ORIGINS`                               | SPA origins (comma list)                      | localhost              | SPA domain       |
-| `HA_USE_X_FORWARDED_FOR` / `HA_TRUSTED_PROXIES` | reverse-proxy trust                           | off                    | on               |
-| `HC_STAGE_CONFIG`                               | copy baked packages/blueprints into `/config` | unset                  | `1`              |
-| `HC_AUTO_SETUP`                                 | self-onboard + create calendar on boot        | `1`                    | `1`              |
-| `HC_KEEPALIVE_URL`                              | self-ping URL so timers outlive Fly auto_stop | unset                  | public HA URL    |
+| Var                                             | Purpose                                       | Dev                    | Fly demo            |
+| ----------------------------------------------- | --------------------------------------------- | ---------------------- | ------------------- |
+| `OIDC_DISCOVERY_URL`                            | issuer well-known URL                         | host proxy             | `sm-oidc-proxy`     |
+| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`         | HA's client registration                      | `dev-ha-secret`        | `fly secrets`       |
+| `OIDC_DISPLAY_NAME`                             | login button label                            | `ScheduleMaster (dev)` | `ScheduleMaster`    |
+| `OIDC_FORCE_HTTPS`                              | https redirect URIs (behind TLS proxy)        | `false`                | `true`              |
+| `HA_CORS_ORIGINS`                               | SPA origins (comma list)                      | localhost              | SPA domain          |
+| `HA_USE_X_FORWARDED_FOR` / `HA_TRUSTED_PROXIES` | reverse-proxy trust                           | off                    | on                  |
+| `HEATERS_JSON`                                  | roster the heater packages render from        | `heaters.demo.json`    | `heaters.demo.json` |
+| `HC_AUTO_SETUP`                                 | self-onboard + create calendar on boot        | `1`                    | `1`                 |
+| `HC_KEEPALIVE_URL`                              | self-ping URL so timers outlive Fly auto_stop | unset                  | public HA URL       |
 
 ## Local dev (OIDC proxy on the host)
 
@@ -60,10 +61,12 @@ cd ha-dev && docker compose up --build
 open http://localhost:8123        # sign in dev/dev, or "ScheduleMaster (dev)"
 ```
 
-`packages/`, `blueprints/`, `configuration.yaml` come from `../homeassistant/`
-(packages/blueprints bind-mounted for live editing; `configuration.yaml` is baked,
-so changes to it need `up --build`). Runtime state lives in the gitignored
-`ha-dev/.dev/`. Full reset: `docker compose down && rm -rf .dev`.
+Config comes from `../homeassistant/`: `configuration.yaml` is baked (changes need
+`up --build`), while the roster (`heaters.demo.json`), `gen_packages.py`,
+`scheduling.yaml`, and `blueprints/` are bind-mounted over `/opt/provision` — edit
+them + `docker compose restart` to regenerate `/config` without a rebuild. Runtime
+state lives in the gitignored `ha-dev/.dev/`. Full reset:
+`docker compose down && rm -rf .dev`.
 
 Debugging the proxy: `pnpm --filter @heater-control/oidc-proxy exec tsx --inspect --watch src/server.ts` and attach your Node debugger.
 

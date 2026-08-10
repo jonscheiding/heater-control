@@ -53,9 +53,12 @@ services:
       retries: 30
       start_period: 20s
     volumes:
-      # Runtime state (DB, logs, .storage, provisioned components, rendered
-      # includes) — gitignored. Source dirs are bind-mounted read-only for live
-      # editing; configuration.yaml is baked and copied in by the entrypoint.
+      # Runtime state (DB, logs, .storage, provisioned components, generated
+      # packages, rendered includes) — gitignored. The entrypoint stages config
+      # into /config from /opt/provision; bind-mount the sources over that so a
+      # `docker compose restart` picks up roster/blueprint edits without a rebuild.
       - ./.dev/config:/config
-      - ../homeassistant/packages:/config/packages:ro
-      - ../homeassistant/blueprints/automation/heater_control:/config/blueprints/automation/heater_control:ro
+      - ../homeassistant/heaters.demo.json:/opt/provision/heaters.demo.json:ro
+      - ../homeassistant/gen_packages.py:/opt/provision/gen_packages.py:ro
+      - ../homeassistant/packages/scheduling.yaml:/opt/provision/packages/scheduling.yaml:ro
+      - ../homeassistant/blueprints:/opt/provision/blueprints:ro

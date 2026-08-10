@@ -97,6 +97,12 @@ esac
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
+# --- stage packages: scheduling (static) + heaters generated from the roster ---
+PKG_STAGE="$STAGE/packages"
+mkdir -p "$PKG_STAGE"
+cp "$HA_SRC/packages/scheduling.yaml" "$PKG_STAGE/"
+python3 "$HA_SRC/gen_packages.py" --input "$HA_SRC/heaters.prod.json" --out "$PKG_STAGE"
+
 # --- stage the OIDC bundle (component + rendered includes) ---
 if [ "$OIDC" -eq 1 ]; then
   [ -n "${OIDC_CLIENT_SECRET:-}" ] || die "--oidc needs OIDC_CLIENT_SECRET in deploy/.env"
@@ -200,7 +206,7 @@ sys.exit(0 if any(e.get("domain") == "local_calendar" and e.get("title") == os.e
 needs_reload=0
 needs_restart=0
 
-if sync "packages/" "$HA_SRC/packages/" "packages/"; then needs_reload=1; fi
+if sync "packages/" "$PKG_STAGE/" "packages/"; then needs_reload=1; fi
 if sync "blueprints/heater_control" \
   "$HA_SRC/blueprints/automation/heater_control/" \
   "blueprints/automation/heater_control/"; then needs_reload=1; fi
