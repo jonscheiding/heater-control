@@ -18,6 +18,12 @@ demo.
   trust differ per environment without editing this file). This layout is for the
   **container**; on a prod HAOS box `deploy/push.sh --oidc` renders `auth_oidc.yaml`
   and HTTP/CORS is configured in the UI (2026.8+), so `http.yaml` isn't used there.
+- **Calendar event schema** — both calendars (`calendar.heater_schedules` and
+  `calendar.schedulemaster`) use the same shape: the event **summary** is a human
+  label (`"Name - Tail"`) for the HA calendar UI, and the **description** is a JSON
+  payload — `{entity_id, source, username, user_id, user_email, n_number,
+aircraft_type, comment}`. The turn-on automation reads `entity_id` from it (and
+  still tolerates a legacy plain-`entity_id` description); the SPA reads the rest.
 - `packages/` — `scheduling.yaml` (calendar-triggered turn-on) plus one
   **generated** `heater_<id>.yaml` per heater. Enabled via
   `homeassistant: packages: !include_dir_named packages` in `configuration.yaml`.
@@ -69,10 +75,9 @@ entity that is a live projection of the upcoming airplane reservations:
 
 - For each booking it maps `N_NO` → the heater with the matching `n_number`
   attribute and emits a preheat event starting **2h before** the flight
-  (`preheat_lead`, configurable). The event's `description` is the heater
-  `entity_id`, so the existing `scheduling.yaml` turn-on automation (which also
-  triggers on this calendar) starts the heater; the per-heater auto-off timer
-  turns it off.
+  (`preheat_lead`, configurable). The `scheduling.yaml` turn-on automation (which
+  also triggers on this calendar) reads the target heater out of the event and
+  turns it on; the per-heater auto-off timer turns it off.
 - Bookings that **disappear** drop out of the projection automatically. A booking
   whose forecast temperature at flight time is **above `warm_threshold_f`** is
   omitted (no preheat needed) — so the threshold is the temperature above which

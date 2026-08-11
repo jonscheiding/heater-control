@@ -96,9 +96,7 @@ export function HeaterRow({
               <li key={s.uid} className={styles.scheduleItem}>
                 <span
                   className={styles.scheduleText}
-                  title={
-                    fromScheduleMaster ? (s.summary ?? undefined) : undefined
-                  }
+                  title={s.title ?? undefined}
                 >
                   {fromScheduleMaster && (
                     <span className={styles.smBadge}>ScheduleMaster</span>
@@ -107,9 +105,9 @@ export function HeaterRow({
                   {forecastTemp != null && (
                     <> · {Math.round(forecastTemp)}&deg;</>
                   )}
-                  {fromScheduleMaster
-                    ? s.summary != null && ` · ${s.summary}`
-                    : s.createdBy != null && ` · by ${s.createdBy}`}
+                  {fromScheduleMaster && s.comment != null
+                    ? ` · ${s.comment}`
+                    : s.username != null && ` · by ${s.username}`}
                 </span>
                 <Button
                   onClick={() => {

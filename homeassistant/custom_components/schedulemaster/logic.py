@@ -11,7 +11,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from .const import ATTR_N_NUMBER, UID_PREFIX
+from .const import ATTR_AIRCRAFT_TYPE, ATTR_N_NUMBER, UID_PREFIX
 from .models import Reservation
 
 
@@ -20,20 +20,33 @@ def normalize_tail(value: object) -> str:
     return str(value or "").strip().upper()
 
 
+@dataclass(frozen=True)
+class HeaterRef:
+    """A heater a booking maps to, plus metadata for the event payload."""
+
+    entity_id: str
+    aircraft_type: str | None
+
+
 def build_nnumber_map(
     entities: Iterable[tuple[str, Mapping[str, object]]],
-) -> dict[str, str]:
-    """Map normalized tail number -> heater entity_id from entity attributes.
+) -> dict[str, HeaterRef]:
+    """Map normalized tail number -> HeaterRef from entity attributes.
 
     ``entities`` is an iterable of ``(entity_id, attributes)``. Any entity that
     carries a non-empty ``n_number`` attribute is eligible (the heater packages
     set it via ``homeassistant: customize:``). First one wins on a collision.
     """
-    out: dict[str, str] = {}
+    out: dict[str, HeaterRef] = {}
     for entity_id, attrs in entities:
-        tail = normalize_tail((attrs or {}).get(ATTR_N_NUMBER))
+        attrs = attrs or {}
+        tail = normalize_tail(attrs.get(ATTR_N_NUMBER))
         if tail:
-            out.setdefault(tail, entity_id)
+            aircraft_type = attrs.get(ATTR_AIRCRAFT_TYPE)
+            out.setdefault(
+                tail,
+                HeaterRef(entity_id, str(aircraft_type).strip() or None if aircraft_type else None),
+            )
     return out
 
 
@@ -43,21 +56,20 @@ class PreheatEvent:
 
     uid: str
     key: str
-    entity_id: str  # heater to turn on (calendar event `description`)
-    summary: str
-    location: str
+    entity_id: str  # heater to turn on
+    username: str | None  # pilot name
+    user_id: str | None
+    user_email: str | None
+    n_number: str | None
+    aircraft_type: str | None
+    comment: str | None  # flight comment / destination
     start: datetime  # when the heater turns on (flight start - lead)
     end: datetime  # flight start
 
 
-def _summary(res: Reservation) -> str:
-    parts = [p for p in (res.n_number, res.destination) if p]
-    return " · ".join(parts) if parts else res.n_number
-
-
 def project_events(
     reservations: Iterable[Reservation],
-    nnumber_map: Mapping[str, str],
+    nnumber_map: Mapping[str, HeaterRef],
     suppressed: set[str],
     forecast_lookup: Callable[[datetime], float | None] | None,
     *,
@@ -75,8 +87,8 @@ def project_events(
     for res in reservations:
         if res.key in suppressed:
             continue
-        entity_id = nnumber_map.get(normalize_tail(res.n_number))
-        if not entity_id:
+        ref = nnumber_map.get(normalize_tail(res.n_number))
+        if ref is None:
             continue
         if forecast_lookup is not None:
             temp = forecast_lookup(res.start)
@@ -86,9 +98,13 @@ def project_events(
             PreheatEvent(
                 uid=f"{UID_PREFIX}{res.key}",
                 key=res.key,
-                entity_id=entity_id,
-                summary=_summary(res),
-                location=res.destination,
+                entity_id=ref.entity_id,
+                username=res.pilot_name or None,
+                user_id=res.user_id,
+                user_email=res.pilot_email or None,
+                n_number=res.n_number or None,
+                aircraft_type=ref.aircraft_type,
+                comment=res.destination or None,
                 start=res.start - preheat_lead,
                 end=res.start,
             )

@@ -27,6 +27,11 @@ interface Props {
   connection: Connection;
   entities: HassEntities;
   username: string;
+  userId: string | null;
+}
+
+function attrString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function byName(
@@ -38,7 +43,7 @@ function byName(
   return nameA.localeCompare(nameB);
 }
 
-export function HeaterList({ connection, entities, username }: Props) {
+export function HeaterList({ connection, entities, username, userId }: Props) {
   const now = useNow(1000);
   const heaters = getHeaters(entities);
   const weatherEntity = findWeatherEntity(entities);
@@ -53,6 +58,8 @@ export function HeaterList({ connection, entities, username }: Props) {
   const [dialogHeater, setDialogHeater] = useState<{
     entityId: string;
     name: string;
+    nNumber: string | null;
+    aircraftType: string | null;
   } | null>(null);
 
   if (heaters.length === 0) {
@@ -78,6 +85,8 @@ export function HeaterList({ connection, entities, username }: Props) {
         {heaters.sort(byName).map((h) => {
           const isOn = h.state === "on";
           const name = h.attributes.friendly_name ?? h.entity_id;
+          const nNumber = attrString(h.attributes.n_number);
+          const aircraftType = attrString(h.attributes.aircraft_type);
           const heaterSchedules = schedules.filter(
             (s) => s.entityId === h.entity_id,
           );
@@ -100,7 +109,12 @@ export function HeaterList({ connection, entities, username }: Props) {
                 toggle.mutate({ entityId: h.entity_id, isOn });
               }}
               onSchedule={() => {
-                setDialogHeater({ entityId: h.entity_id, name });
+                setDialogHeater({
+                  entityId: h.entity_id,
+                  name,
+                  nNumber,
+                  aircraftType,
+                });
               }}
               onSchedulePreset={(preset) => {
                 if (
@@ -129,8 +143,11 @@ export function HeaterList({ connection, entities, username }: Props) {
                 create.mutate({
                   targetEntityId: h.entity_id,
                   targetName: name,
-                  createdBy: username,
                   startIso: start.toISOString(),
+                  username,
+                  userId,
+                  nNumber,
+                  aircraftType,
                 });
               }}
               onCancelSchedule={(schedule) => {
@@ -159,8 +176,11 @@ export function HeaterList({ connection, entities, username }: Props) {
             {
               targetEntityId: dialogHeater.entityId,
               targetName: dialogHeater.name,
-              createdBy: username,
               startIso,
+              username,
+              userId,
+              nNumber: dialogHeater.nNumber,
+              aircraftType: dialogHeater.aircraftType,
             },
             {
               onSuccess: () => {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import json
 
 from homeassistant.components.calendar import (
     CalendarEntity,
@@ -15,7 +16,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 import homeassistant.util.dt as dt_util
 
-from .const import CALENDAR_NAME, CALENDAR_UNIQUE_ID, DOMAIN
+from .const import CALENDAR_NAME, CALENDAR_UNIQUE_ID, DOMAIN, SOURCE
 from .coordinator import ScheduleMasterCoordinator
 from .logic import PreheatEvent
 
@@ -32,13 +33,28 @@ async def async_setup_platform(
 
 
 def _to_event(ev: PreheatEvent) -> CalendarEvent:
+    # summary: human label for the HA calendar UI ("Name - Tail").
+    label_parts = [p for p in (ev.username, ev.n_number) if p]
+    summary = " - ".join(label_parts) if label_parts else (ev.n_number or SOURCE)
+    # description: structured payload shared with the SPA + turn-on automation.
+    # The automation reads entity_id out of this JSON.
+    description = json.dumps(
+        {
+            "entity_id": ev.entity_id,
+            "source": SOURCE,
+            "username": ev.username,
+            "user_id": ev.user_id,
+            "user_email": ev.user_email,
+            "n_number": ev.n_number,
+            "aircraft_type": ev.aircraft_type,
+            "comment": ev.comment,
+        }
+    )
     return CalendarEvent(
-        summary=ev.summary,
+        summary=summary,
         start=ev.start,
         end=ev.end,
-        # The turn-on automation turns on trigger.calendar_event.description.
-        description=ev.entity_id,
-        location=ev.location or None,
+        description=description,
         uid=ev.uid,
     )
 

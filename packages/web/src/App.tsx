@@ -93,6 +93,7 @@ export default function App() {
             connection={connection}
             entities={entities}
             username={user?.name || "Pilot"}
+            userId={user?.id ?? null}
           />
         )}
       </main>

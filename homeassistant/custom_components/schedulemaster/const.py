@@ -29,9 +29,13 @@ DEFAULT_WEATHER_ENTITY = "weather.forecast_home"
 # Only airplane reservations get a heater.
 RES_LIST = "CATEGORY->AIRPLANE,"
 
-# Attribute the heater packages carry (see homeassistant/gen_packages.py) that
-# maps a heater entity to an aircraft tail number.
+# Attributes the heater packages carry (see homeassistant/gen_packages.py): the
+# aircraft tail number (used to map a booking to a heater) and its type.
 ATTR_N_NUMBER = "n_number"
+ATTR_AIRCRAFT_TYPE = "aircraft_type"
+
+# Event source, recorded in the calendar event's JSON description.
+SOURCE = "schedulemaster"
 
 CALENDAR_UNIQUE_ID = "schedulemaster_preheat"
 CALENDAR_NAME = "ScheduleMaster"

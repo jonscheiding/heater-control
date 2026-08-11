@@ -2,8 +2,7 @@ automation:
   - alias: "Heater schedules: turn on from calendar event"
     # The calendar trigger takes a single entity_id, so list both calendars as
     # separate triggers: user-created schedules (calendar.heater_schedules) and
-    # ScheduleMaster preheats (calendar.schedulemaster). Both encode the target
-    # heater entity_id in the event description.
+    # ScheduleMaster preheats (calendar.schedulemaster).
     trigger:
       - platform: calendar
         event: start
@@ -12,6 +11,14 @@ automation:
         event: start
         entity_id: calendar.schedulemaster
     action:
+      # The event description is a JSON payload; the target heater is its
+      # entity_id. Tolerate a legacy plain-entity_id description too.
+      - variables:
+          desc: "{{ trigger.calendar_event.description or '' }}"
+          payload: >-
+            {{ desc | from_json if desc.startswith('{') else {'entity_id': desc} }}
+      - condition: template
+        value_template: "{{ payload.entity_id | default('') | length > 0 }}"
       - service: homeassistant.turn_on
         target:
-          entity_id: "{{ trigger.calendar_event.description }}"
+          entity_id: "{{ payload.entity_id }}"

@@ -9,15 +9,34 @@ export type ScheduleSource = "local" | "schedulemaster";
 
 export interface HeaterSchedule {
   uid: string;
-  entityId: string;
-  createdBy: string | null;
   startIso: string;
   endIso: string;
-  source: ScheduleSource;
   /** Calendar entity this event lives on — needed to delete it. */
   calendarEntity: string;
-  /** Raw event summary; shown as detail for ScheduleMaster events. */
-  summary: string | null;
+  /** Target heater entity_id (the turn-on target). */
+  entityId: string;
+  source: ScheduleSource;
+  username: string | null;
+  userId: string | null;
+  userEmail: string | null;
+  nNumber: string | null;
+  aircraftType: string | null;
+  /** Flight comment (ScheduleMaster). */
+  comment: string | null;
+  /** Raw event summary ("Name - Tail"); handy for debugging/tooltip. */
+  title: string | null;
+}
+
+/** JSON payload stored in a calendar event's `description` (shared with HA). */
+interface EventPayload {
+  entity_id?: string;
+  source?: string;
+  username?: string | null;
+  user_id?: string | null;
+  user_email?: string | null;
+  n_number?: string | null;
+  aircraft_type?: string | null;
+  comment?: string | null;
 }
 
 interface RawEvent {
@@ -36,16 +55,19 @@ function extractIso(
   return undefined;
 }
 
-function parseCreatedBy(summary: string): string | null {
-  const idx = summary.indexOf("·");
-  if (idx === -1) return null;
-  const before = summary.slice(0, idx).trim();
-  return before || null;
+function parsePayload(description: string): EventPayload | null {
+  const trimmed = description.trim();
+  if (!trimmed.startsWith("{")) return null;
+  try {
+    return JSON.parse(trimmed) as EventPayload;
+  } catch {
+    return null;
+  }
 }
 
 async function listFromCalendar(
   calendarEntity: string,
-  source: ScheduleSource,
+  defaultSource: ScheduleSource,
   startIso: string,
   endIso: string,
 ): Promise<HeaterSchedule[]> {
@@ -68,18 +90,32 @@ async function listFromCalendar(
     .map((e): HeaterSchedule | null => {
       const startVal = extractIso(e.start);
       const endVal = extractIso(e.end);
-      if (!e.uid || !e.description || !startVal || !endVal) return null;
+      const description = (e.description ?? "").trim();
+      const payload = parsePayload(description);
+      // Structured events carry entity_id in the JSON; tolerate a legacy
+      // plain-entity_id description too.
+      const entityId = (payload?.entity_id ?? description).trim();
+      if (!e.uid || !entityId || !startVal || !endVal) return null;
+
+      const source: ScheduleSource =
+        payload?.source === "local" || payload?.source === "schedulemaster"
+          ? payload.source
+          : defaultSource;
+
       return {
         uid: e.uid,
-        entityId: e.description.trim(),
-        // Local events carry "<user> · <name>"; ScheduleMaster events aren't
-        // user-created, so leave createdBy null and surface the summary instead.
-        createdBy: source === "local" ? parseCreatedBy(e.summary ?? "") : null,
         startIso: startVal,
         endIso: endVal,
-        source,
         calendarEntity,
-        summary: e.summary?.trim() || null,
+        entityId,
+        source,
+        username: payload?.username ?? null,
+        userId: payload?.user_id ?? null,
+        userEmail: payload?.user_email ?? null,
+        nNumber: payload?.n_number ?? null,
+        aircraftType: payload?.aircraft_type ?? null,
+        comment: payload?.comment ?? null,
+        title: e.summary?.trim() || null,
       };
     })
     .filter((s): s is HeaterSchedule => s !== null);
@@ -106,8 +142,11 @@ export async function listSchedules(
 export interface CreateScheduleInput {
   targetEntityId: string;
   targetName: string;
-  createdBy: string;
   startIso: string;
+  username: string;
+  userId: string | null;
+  nNumber: string | null;
+  aircraftType: string | null;
 }
 
 export async function createSchedule(
@@ -117,13 +156,26 @@ export async function createSchedule(
   const endIso = new Date(
     new Date(input.startIso).getTime() + 60_000,
   ).toISOString();
+  const payload: EventPayload = {
+    entity_id: input.targetEntityId,
+    source: "local",
+    username: input.username,
+    user_id: input.userId,
+    user_email: null,
+    n_number: input.nNumber,
+    aircraft_type: input.aircraftType,
+    comment: null,
+  };
+  const summary = input.nNumber
+    ? `${input.username} - ${input.nNumber}`
+    : `${input.username} - ${input.targetName}`;
   await callService(
     connection,
     "calendar",
     "create_event",
     {
-      summary: `${input.createdBy} · ${input.targetName}`,
-      description: input.targetEntityId,
+      summary,
+      description: JSON.stringify(payload),
       start_date_time: input.startIso,
       end_date_time: endIso,
     },

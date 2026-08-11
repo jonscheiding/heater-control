@@ -12,12 +12,13 @@ class Reservation:
 
     key: str  # durable identity: orig_key, else sch_id
     n_number: str
-    start: datetime  # tz-aware (UTC), from sec_start
+    start: datetime  # tz-aware (UTC), localized from sch_start
     end: datetime | None
     pilot_first: str
     pilot_last: str
     pilot_email: str
     destination: str
+    user_id: str | None  # made_by_user
     raw: dict = field(default_factory=dict, compare=False, repr=False)
 
     @property
@@ -69,6 +70,7 @@ def parse_reservation(raw: dict, tz: tzinfo) -> Reservation | None:
         pilot_last=str(raw.get("lastname", "")).strip(),
         pilot_email=str(raw.get("email", "")).strip(),
         destination=str(raw.get("destination", "")).strip(),
+        user_id=str(raw.get("made_by_user") or "").strip() or None,
         raw=raw,
     )
 

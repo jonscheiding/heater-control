@@ -18,6 +18,7 @@ ROW = {
     "sch_end": "2026-07-29T21:00:00",
     "destination": "Cross Country:Chicago",
     "N_NO": "628FN",
+    "made_by_user": 119421,
     "lastname": "Murry",
     "firstname": "Steven",
     "email": "stevenjmurry@gmail.com",
@@ -35,6 +36,7 @@ def test_parse_valid_utc():
     assert res.pilot_name == "Steven Murry"
     assert res.pilot_email == "stevenjmurry@gmail.com"
     assert res.destination == "Cross Country:Chicago"
+    assert res.user_id == "119421"
 
 
 def test_parse_localizes_wall_time_to_tz():

@@ -64,6 +64,8 @@ export function createProvider(
         attributes: { out, id },
       });
 
+      console.error(error, out, id);
+
       ctx.type = "html";
       ctx.body = errorPage(
         `Something went wrong: ${out.error ?? "Unknown error"}. Please share this identifier with Operations: ${id}`,
