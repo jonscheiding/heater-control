@@ -37,6 +37,17 @@ services:
       - OIDC_FORCE_HTTPS=false
       - HA_CORS_ORIGINS=${HA_CORS_ORGINS:-http://localhost:5173,http://localhost:8123}
       - HA_ONBOARD_PASSWORD=${HA_ONBOARD_PASSWORD:-dev}
+      # ScheduleMaster: unset by default (calendar.schedulemaster is created but
+      # empty). Set SM_USERNAME/SM_PASSWORD in the environment to poll live.
+      - SM_USERNAME=${SM_USERNAME:-}
+      - SM_PASSWORD=${SM_PASSWORD:-}
+      - SM_BASE_URL=${SM_BASE_URL:-}
+      - SM_WARM_THRESHOLD_F=${SM_WARM_THRESHOLD_F:-}
+      - SM_WEATHER_ENTITY=${SM_WEATHER_ENTITY:-}
+      - SM_PREHEAT_LEAD=${SM_PREHEAT_LEAD:-}
+      # Timezone of the ScheduleMaster wall-times; set when HA's own tz isn't the
+      # club's local time (dev onboards HA as UTC).
+      - SM_TIMEZONE=${SM_TIMEZONE:-}
       - PUID=${PUID:-}
       - PGID=${PGID:-}
     healthcheck:
@@ -62,3 +73,7 @@ services:
       - ../homeassistant/gen_packages.py:/opt/provision/gen_packages.py:ro
       - ../homeassistant/packages/scheduling.yaml:/opt/provision/packages/scheduling.yaml:ro
       - ../homeassistant/blueprints:/opt/provision/blueprints:ro
+      # Custom component sources: mount the schedulemaster subdir only (mounting
+      # the whole custom_components dir would hide the image-baked auth_oidc).
+      # `docker compose restart` restages it. Add a line per new component.
+      - ../homeassistant/custom_components/schedulemaster:/opt/provision/custom_components/schedulemaster:ro

@@ -51,7 +51,15 @@ homeassistant:
 # OIDC login (auth_oidc) — adds an SSO option to HA's login screen.
 auth_oidc: !include auth_oidc.yaml
 
+# ScheduleMaster integration — auto-preheats from flight bookings and exposes
+# calendar.schedulemaster (empty until account credentials are provided). Like
+# the two includes above, schedulemaster.yaml is rendered from env at container
+# start (ha-dev/render_config.py); on a prod HAOS box create it by hand with the
+# ScheduleMaster username/password.
+schedulemaster: !include schedulemaster.yaml
+
 logger:
   default: info
   logs:
     custom_components.auth_oidc: debug
+    custom_components.schedulemaster: info

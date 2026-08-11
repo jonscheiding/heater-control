@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "pnpm -r build && docker compose -f ha-dev/docker-compose.yml build",
     "dev": "concurrently 'pnpm dev:oidc' 'pnpm dev:web' 'pnpm dev:ha'",
-    "dev:ha": "docker compose -f ha-dev/docker-compose.yml up",
+    "dev:ha": "docker compose -f ha-dev/docker-compose.yml up --build",
     "dev:oidc": "pnpm --filter @heater-control/oidc-proxy dev",
     "dev:sm": "pnpm --filter @heater-control/sm-client dev",
     "dev:web": "pnpm --filter @heater-control/web dev",

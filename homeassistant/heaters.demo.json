@@ -1,17 +1,45 @@
 [
   {
     "id": "heater_1",
-    "label": "C182 N3537C",
+    "label": "C182 N628FN",
+    "aircraft_type": "C182",
+    "n_number": "628FN",
     "simulated": true,
     "simulated_power_initial": 0
   },
-  { "id": "heater_2", "label": "C172 N555FN", "simulated": true },
-  { "id": "heater_3", "label": "C172 N737GE", "simulated": true },
-  { "id": "heater_4", "label": "C182 N9525D", "simulated": true },
-  { "id": "heater_5", "label": "C206 N206FN", "simulated": true },
+  {
+    "id": "heater_2",
+    "label": "C172 N555FN",
+    "aircraft_type": "C172",
+    "n_number": "555FN",
+    "simulated": true
+  },
+  {
+    "id": "heater_3",
+    "label": "C172 N737GE",
+    "aircraft_type": "C172",
+    "n_number": "737GE",
+    "simulated": true
+  },
+  {
+    "id": "heater_4",
+    "label": "C182 N9525D",
+    "aircraft_type": "C182",
+    "n_number": "9525D",
+    "simulated": true
+  },
+  {
+    "id": "heater_5",
+    "label": "C206 N206FN",
+    "aircraft_type": "C206",
+    "n_number": "206FN",
+    "simulated": true
+  },
   {
     "id": "heater_6",
     "label": "C172 N2FN",
+    "aircraft_type": "C172",
+    "n_number": "2FN",
     "simulated": true,
     "simulated_power_initial": 0
   }

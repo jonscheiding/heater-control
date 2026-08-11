@@ -69,7 +69,7 @@ export function HeaterList({ connection, entities, username }: Props) {
 
   const nowIso = new Date(now).toISOString();
   const maxIso = new Date(now + 24 * 60 * 60 * 1000).toISOString();
-  const cancellingUid = del.isPending ? del.variables : undefined;
+  const cancellingUid = del.isPending ? del.variables.uid : undefined;
 
   return (
     <>
@@ -133,8 +133,11 @@ export function HeaterList({ connection, entities, username }: Props) {
                   startIso: start.toISOString(),
                 });
               }}
-              onCancelSchedule={(uid) => {
-                del.mutate(uid);
+              onCancelSchedule={(schedule) => {
+                del.mutate({
+                  uid: schedule.uid,
+                  calendarEntity: schedule.calendarEntity,
+                });
               }}
               cancellingUid={cancellingUid}
             />

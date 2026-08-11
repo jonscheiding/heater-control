@@ -23,6 +23,17 @@ echo "[entrypoint] installing auth_oidc"
 rm -rf "$CONFIG/custom_components/auth_oidc"
 cp -r "$SRC/custom_components/auth_oidc" "$CONFIG/custom_components/auth_oidc"
 
+# Other repo-tracked custom components (schedulemaster, ...): same deal — the
+# image is the source of truth, so always refresh from it (Python components
+# don't hot-reload; a `docker compose restart` re-stages the mounted sources).
+for comp in "$SRC"/custom_components/*/; do
+  name=$(basename "$comp")
+  [ "$name" = "auth_oidc" ] && continue
+  echo "[entrypoint] installing custom_component $name"
+  rm -rf "$CONFIG/custom_components/$name"
+  cp -r "$comp" "$CONFIG/custom_components/$name"
+done
+
 # Base config: always refresh from the image (the image is the source of truth).
 cp "$SRC/configuration.yaml" "$CONFIG/configuration.yaml"
 

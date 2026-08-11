@@ -1,0 +1,108 @@
+"""Tests for the pure projection logic (dependency-free)."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+
+from sm_under_test import logic
+from sm_under_test.models import Reservation
+
+LEAD = timedelta(hours=2)
+FLIGHT = datetime(2026, 1, 15, 14, 0, tzinfo=UTC)  # cold January flight
+
+
+def _res(key="k1", n="N123AB", start=FLIGHT):
+    return Reservation(
+        key=key,
+        n_number=n,
+        start=start,
+        end=start + timedelta(hours=2),
+        pilot_first="Amy",
+        pilot_last="Aviator",
+        pilot_email="amy@example.com",
+        destination="KJYO",
+    )
+
+
+def test_build_nnumber_map_normalizes_and_ignores_blanks():
+    entities = [
+        ("input_boolean.heater_1", {"n_number": " n123ab "}),
+        ("switch.heater_2", {"n_number": "N9525D"}),
+        ("switch.other", {}),
+        ("sensor.heater_1_power", {"n_number": None}),
+    ]
+    m = logic.build_nnumber_map(entities)
+    assert m == {"N123AB": "input_boolean.heater_1", "N9525D": "switch.heater_2"}
+
+
+def test_project_maps_and_applies_lead():
+    m = {"N123AB": "input_boolean.heater_1"}
+    events = logic.project_events(
+        [_res()], m, set(), None, preheat_lead=LEAD, warm_threshold_f=45.0
+    )
+    assert len(events) == 1
+    ev = events[0]
+    assert ev.entity_id == "input_boolean.heater_1"
+    assert ev.start == FLIGHT - LEAD
+    assert ev.end == FLIGHT
+    assert ev.uid == "sm-k1"
+
+
+def test_project_skips_unmapped_tail():
+    events = logic.project_events(
+        [_res(n="N000ZZ")], {"N123AB": "input_boolean.heater_1"}, set(), None,
+        preheat_lead=LEAD, warm_threshold_f=45.0,
+    )
+    assert events == []
+
+
+def test_project_skips_suppressed():
+    m = {"N123AB": "input_boolean.heater_1"}
+    events = logic.project_events(
+        [_res(key="k1")], m, {"k1"}, None, preheat_lead=LEAD, warm_threshold_f=45.0
+    )
+    assert events == []
+
+
+def test_project_omits_warm_flight():
+    m = {"N123AB": "input_boolean.heater_1"}
+    warm = lambda when: 60.0  # noqa: E731 — above threshold
+    events = logic.project_events(
+        [_res()], m, set(), warm, preheat_lead=LEAD, warm_threshold_f=45.0
+    )
+    assert events == []
+
+
+def test_project_keeps_cold_flight():
+    m = {"N123AB": "input_boolean.heater_1"}
+    cold = lambda when: 20.0  # noqa: E731
+    events = logic.project_events(
+        [_res()], m, set(), cold, preheat_lead=LEAD, warm_threshold_f=45.0
+    )
+    assert len(events) == 1
+
+
+def test_project_keeps_when_forecast_unknown():
+    m = {"N123AB": "input_boolean.heater_1"}
+    unknown = lambda when: None  # noqa: E731 — fail toward preheating
+    events = logic.project_events(
+        [_res()], m, set(), unknown, preheat_lead=LEAD, warm_threshold_f=45.0
+    )
+    assert len(events) == 1
+
+
+def test_make_forecast_lookup_nearest_within_gap():
+    pts = [
+        (datetime(2026, 1, 15, 13, 0, tzinfo=UTC), 18.0),
+        (datetime(2026, 1, 15, 14, 0, tzinfo=UTC), 22.0),
+        (datetime(2026, 1, 15, 15, 0, tzinfo=UTC), 25.0),
+    ]
+    lookup = logic.make_forecast_lookup(pts, timedelta(minutes=90))
+    assert lookup(datetime(2026, 1, 15, 14, 10, tzinfo=UTC)) == 22.0
+
+
+def test_make_forecast_lookup_returns_none_beyond_gap():
+    pts = [(datetime(2026, 1, 15, 14, 0, tzinfo=UTC), 22.0)]
+    lookup = logic.make_forecast_lookup(pts, timedelta(minutes=90))
+    # Query 5 hours away — outside the max gap.
+    assert lookup(datetime(2026, 1, 15, 19, 0, tzinfo=UTC)) is None

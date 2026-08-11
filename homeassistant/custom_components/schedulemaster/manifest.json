@@ -1,0 +1,11 @@
+{
+  "domain": "schedulemaster",
+  "name": "ScheduleMaster",
+  "version": "0.1.0",
+  "documentation": "https://github.com/jonscheiding/heater-control",
+  "codeowners": ["@jonscheiding"],
+  "dependencies": ["calendar"],
+  "after_dependencies": ["weather"],
+  "iot_class": "cloud_polling",
+  "requirements": []
+}

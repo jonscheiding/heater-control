@@ -17,4 +17,5 @@
 ## FEATURES
 
 - [x] Temp sensor support
-- [ ] Schedule Master support
+- [x] Schedule Master support
+  - [ ] Email pilots when a preheat is scheduled (deferred; seam left in the coordinator/store)

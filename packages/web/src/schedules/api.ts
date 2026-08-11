@@ -3,6 +3,9 @@ import { callService, type Connection } from "home-assistant-js-websocket";
 import { haFetch } from "../ha/connection.js";
 
 export const SCHEDULES_CALENDAR = "calendar.heater_schedules";
+export const SCHEDULEMASTER_CALENDAR = "calendar.schedulemaster";
+
+export type ScheduleSource = "local" | "schedulemaster";
 
 export interface HeaterSchedule {
   uid: string;
@@ -10,6 +13,11 @@ export interface HeaterSchedule {
   createdBy: string | null;
   startIso: string;
   endIso: string;
+  source: ScheduleSource;
+  /** Calendar entity this event lives on — needed to delete it. */
+  calendarEntity: string;
+  /** Raw event summary; shown as detail for ScheduleMaster events. */
+  summary: string | null;
 }
 
 interface RawEvent {
@@ -35,18 +43,20 @@ function parseCreatedBy(summary: string): string | null {
   return before || null;
 }
 
-export async function listSchedules(
+async function listFromCalendar(
+  calendarEntity: string,
+  source: ScheduleSource,
   startIso: string,
   endIso: string,
 ): Promise<HeaterSchedule[]> {
   const path =
-    `/api/calendars/${SCHEDULES_CALENDAR}` +
+    `/api/calendars/${calendarEntity}` +
     `?start=${encodeURIComponent(startIso)}` +
     `&end=${encodeURIComponent(endIso)}`;
   const response = await haFetch(path);
   if (!response.ok) {
     throw new Error(
-      `Failed to list schedules: ${response.status} ${response.statusText}`,
+      `Failed to list schedules for ${calendarEntity}: ${response.status} ${response.statusText}`,
     );
   }
   const data: unknown = await response.json();
@@ -62,12 +72,35 @@ export async function listSchedules(
       return {
         uid: e.uid,
         entityId: e.description.trim(),
-        createdBy: parseCreatedBy(e.summary ?? ""),
+        // Local events carry "<user> · <name>"; ScheduleMaster events aren't
+        // user-created, so leave createdBy null and surface the summary instead.
+        createdBy: source === "local" ? parseCreatedBy(e.summary ?? "") : null,
         startIso: startVal,
         endIso: endVal,
+        source,
+        calendarEntity,
+        summary: e.summary?.trim() || null,
       };
     })
     .filter((s): s is HeaterSchedule => s !== null);
+}
+
+export async function listSchedules(
+  startIso: string,
+  endIso: string,
+): Promise<HeaterSchedule[]> {
+  // Local schedules are required; ScheduleMaster is best-effort so the app keeps
+  // working when the integration isn't deployed (the calendar 404s).
+  const [local, sm] = await Promise.all([
+    listFromCalendar(SCHEDULES_CALENDAR, "local", startIso, endIso),
+    listFromCalendar(
+      SCHEDULEMASTER_CALENDAR,
+      "schedulemaster",
+      startIso,
+      endIso,
+    ).catch(() => [] as HeaterSchedule[]),
+  ]);
+  return [...local, ...sm];
 }
 
 export interface CreateScheduleInput {
@@ -101,10 +134,11 @@ export async function createSchedule(
 export async function deleteSchedule(
   connection: Connection,
   uid: string,
+  calendarEntity: string,
 ): Promise<void> {
   await connection.sendMessagePromise({
     type: "calendar/event/delete",
-    entity_id: SCHEDULES_CALENDAR,
+    entity_id: calendarEntity,
     uid,
   });
 }

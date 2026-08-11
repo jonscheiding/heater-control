@@ -18,6 +18,11 @@ Each entry:
     simulated_power_initial   simulated watts (simulated only, default 1200)
     icon                      input_boolean icon (simulated only, default radiator)
     switch                    real switch entity (real only, default switch.<id>)
+    n_number                  aircraft tail number (e.g. N3537C); surfaced as an
+                              `n_number` entity attribute so the schedulemaster
+                              integration can map a booking's N_NO to this heater
+    aircraft_type             aircraft type/model (e.g. C182); surfaced as an
+                              `aircraft_type` entity attribute (informational)
 
 stdlib only (runs on the operator's machine and in the container).
 """
@@ -106,15 +111,22 @@ def render(h):
             f"            0\n"
             f"          {{% endif %}}\n"
         )
-    else:
-        # Real switch: the device provides switch.<id> + its power sensor; we only
-        # add the timer + auto-off wiring, and override the switch's display name.
-        blocks.append(
-            f"homeassistant:\n"
-            f"  customize:\n"
-            f"    {switch}:\n"
-            f"      friendly_name: {_yq(label)}\n"
-        )
+    # Entity attributes via `homeassistant: customize:`. The target is whichever
+    # entity the SPA and automations act on (input_boolean for simulated, the real
+    # switch otherwise). Real switches also get their display name overridden here
+    # (simulated ones carry `name:` on the input_boolean instead). n_number /
+    # aircraft_type are optional metadata the schedulemaster integration reads.
+    customize = {}
+    if not simulated:
+        customize["friendly_name"] = label
+    if h.get("n_number"):
+        customize["n_number"] = str(h["n_number"]).strip()
+    if h.get("aircraft_type"):
+        customize["aircraft_type"] = str(h["aircraft_type"]).strip()
+    if customize:
+        attrs = "".join(f"      {k}: {_yq(v)}\n" for k, v in customize.items())
+        blocks.append(f"homeassistant:\n  customize:\n    {toggle}:\n{attrs}")
+
     return "\n".join(blocks)
 
 

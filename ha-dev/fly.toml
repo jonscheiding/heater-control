@@ -27,7 +27,9 @@ primary_region = 'ord'
   OIDC_DISCOVERY_URL = 'https://sm-oidc-proxy.fly.dev/.well-known/openid-configuration'
   OIDC_DISPLAY_NAME = 'ScheduleMaster'
   OIDC_FORCE_HTTPS = 'true'
-  TZ = 'America/Chicago'
+  TZ = 'America/New_York'
+  SM_WARM_THRESHOLD_F = 100
+  SM_TIMEZONE = 'America/New_York'
 
 # Persist /config so onboarding + the local calendar survive stop/suspend/redeploy
 # (no "create your smart home" flash on cold wake). Still scales to zero — the

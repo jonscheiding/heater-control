@@ -42,3 +42,18 @@ jobs:
           SM_TEST_PASSWORD: ${{ secrets.SM_TEST_PASSWORD }}
           SM_TEST_EMAIL: ${{ secrets.SM_TEST_EMAIL }}
         run: pnpm --filter @heater-control/sm-client test:smoke
+
+      # The heater-control integration talks to the smapi.schedulemaster.com JSON
+      # API (findToken + schlist), a different surface from the login scrape
+      # above — smoke it too so contract drift there is caught weekly.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install pytest aiohttp
+
+      - name: Run schedulemaster API smoke (Python)
+        env:
+          SM_TEST_USERNAME: ${{ secrets.SM_TEST_USERNAME }}
+          SM_TEST_PASSWORD: ${{ secrets.SM_TEST_PASSWORD }}
+        run: pytest homeassistant/tests/schedulemaster/test_live.py -q

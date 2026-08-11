@@ -20,7 +20,10 @@ export function useSchedules(connection: Connection | null) {
     queryFn: async () => {
       if (!connection) return [];
       const start = new Date();
-      const end = new Date(start.getTime() + 36 * 60 * 60 * 1000);
+      // 7 days: user-created schedules are near-term, but ScheduleMaster preheats
+      // are known days ahead, so a short window would hide them (the component
+      // projects a 7-day lookahead).
+      const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
       return await listSchedules(start.toISOString(), end.toISOString());
     },
     enabled: !!connection,
@@ -58,12 +61,17 @@ export function useCreateSchedule(connection: Connection | null) {
   });
 }
 
+export interface DeleteScheduleInput {
+  uid: string;
+  calendarEntity: string;
+}
+
 export function useDeleteSchedule(connection: Connection | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (uid: string) => {
+    mutationFn: async ({ uid, calendarEntity }: DeleteScheduleInput) => {
       if (!connection) throw new Error("Not connected to Home Assistant");
-      await deleteSchedule(connection, uid);
+      await deleteSchedule(connection, uid, calendarEntity);
       await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },
   });

@@ -29,3 +29,13 @@ jobs:
       - run: pnpm test
 
       - run: pnpm -r test:smoke
+
+      # Offline unit tests for the schedulemaster HA custom component (pure
+      # parsing + projection logic; no HA/network needed).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install pytest
+
+      - run: pytest homeassistant/tests -q

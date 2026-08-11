@@ -20,7 +20,7 @@ interface Props {
   onToggle: () => void;
   onSchedule: () => void;
   onSchedulePreset: (preset: "1h" | "8am") => void;
-  onCancelSchedule: (uid: string) => void;
+  onCancelSchedule: (schedule: HeaterSchedule) => void;
   cancellingUid: string | undefined;
 }
 
@@ -91,18 +91,29 @@ export function HeaterRow({
               forecast,
               new Date(s.startIso).getTime(),
             );
+            const fromScheduleMaster = s.source === "schedulemaster";
             return (
               <li key={s.uid} className={styles.scheduleItem}>
-                <span className={styles.scheduleText}>
+                <span
+                  className={styles.scheduleText}
+                  title={
+                    fromScheduleMaster ? (s.summary ?? undefined) : undefined
+                  }
+                >
+                  {fromScheduleMaster && (
+                    <span className={styles.smBadge}>ScheduleMaster</span>
+                  )}
                   Scheduled {formatUpcoming(s.startIso, now)}
                   {forecastTemp != null && (
                     <> · {Math.round(forecastTemp)}&deg;</>
                   )}
-                  {s.createdBy != null && ` · by ${s.createdBy}`}
+                  {fromScheduleMaster
+                    ? s.summary != null && ` · ${s.summary}`
+                    : s.createdBy != null && ` · by ${s.createdBy}`}
                 </span>
                 <Button
                   onClick={() => {
-                    onCancelSchedule(s.uid);
+                    onCancelSchedule(s);
                   }}
                   disabled={cancellingUid === s.uid}
                   aria-label={`Cancel schedule ${formatUpcoming(s.startIso, now)}`}

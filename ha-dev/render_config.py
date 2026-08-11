@@ -69,6 +69,33 @@ def render_http():
     return block
 
 
+def render_schedulemaster():
+    """schedulemaster block. Always written (so the `!include` resolves), but the
+    ScheduleMaster credentials are included only when both are set — without them
+    the component still creates an (empty) calendar.schedulemaster and skips
+    polling. Options are emitted only when overridden; the component defaults
+    otherwise."""
+    conf = {}
+    user = os.environ.get("SM_USERNAME", "").strip()
+    pwd = os.environ.get("SM_PASSWORD", "").strip()
+    if user and pwd:
+        conf["username"] = user
+        conf["password"] = pwd
+    for env, key, cast in (
+        ("SM_BASE_URL", "base_url", str),
+        ("SM_WEATHER_ENTITY", "weather_entity", str),
+        ("SM_TIMEZONE", "timezone", str),
+        ("SM_WARM_THRESHOLD_F", "warm_threshold_f", float),
+        ("SM_PREHEAT_LEAD", "preheat_lead", int),
+        ("SM_SCAN_INTERVAL", "scan_interval", int),
+        ("SM_LOOKAHEAD_DAYS", "lookahead_days", int),
+    ):
+        val = os.environ.get(env, "").strip()
+        if val:
+            conf[key] = cast(val)
+    return conf
+
+
 def render_keepalive(url):
     """Fly-only keepalive package. Fly's auto_stop suspends the machine after a
     few idle minutes (not configurable), so an auto-off timer that outlives the
@@ -113,6 +140,7 @@ def _write(name, data):
 def main():
     _write("auth_oidc.yaml", render_auth_oidc())
     _write("http.yaml", render_http())
+    _write("schedulemaster.yaml", render_schedulemaster())
 
     # Keepalive lands in packages/ so !include_dir_named picks it up with no
     # configuration.yaml change. Only rendered when HC_KEEPALIVE_URL is set

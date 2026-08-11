@@ -34,6 +34,9 @@ RUN set -eux; \
 COPY homeassistant/configuration.yaml /opt/provision/configuration.yaml
 COPY homeassistant/packages /opt/provision/packages
 COPY homeassistant/blueprints /opt/provision/blueprints
+# Repo-tracked custom components (schedulemaster, ...) merge alongside the
+# auth_oidc dir materialized above; the entrypoint stages them into /config.
+COPY homeassistant/custom_components /opt/provision/custom_components
 # Heater roster + generator (entrypoint renders packages from the demo roster).
 COPY homeassistant/heaters.demo.json /opt/provision/heaters.demo.json
 COPY homeassistant/gen_packages.py /opt/provision/gen_packages.py
