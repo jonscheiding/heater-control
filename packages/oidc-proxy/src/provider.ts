@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/node";
 import { nanoid } from "nanoid";
 import {
+  interactionPolicy,
   Provider,
   type ClientMetadata,
   type Configuration,
@@ -9,6 +10,39 @@ import {
 import type { AccountStore } from "./account-store.js";
 import type { ProxyEnvironmentConfig } from "./config.js";
 import { errorPage } from "./views.js";
+
+/**
+ * The stock interaction policy assumes a session's account can always be
+ * resolved: `loadAccount` tolerates `findAccount` returning nothing, but then
+ * `loadGrant` skips attaching a Grant, and the consent prompt's checks
+ * dereference `ctx.oidc.grant` unconditionally. Our accounts live in a
+ * short-TTL in-memory cache, so an OP session that outlived its cached claims
+ * crashed `/auth` with `Cannot read properties of undefined (reading
+ * 'getOIDCScopeEncountered')` until the proxy was restarted (which wiped the
+ * sessions along with the accounts). Ask the pilot to log in again instead.
+ */
+export function createInteractionPolicy(): interactionPolicy.DefaultPolicy {
+  const policy = interactionPolicy.base();
+
+  const login = policy.get("login");
+  if (!login) {
+    throw new Error("base interaction policy is missing the login prompt");
+  }
+
+  login.checks.add(
+    new interactionPolicy.Check(
+      "account_not_found",
+      "End-User authentication is required",
+      "login_required",
+      (ctx) =>
+        ctx.oidc.session?.accountId && !ctx.oidc.account
+          ? interactionPolicy.Check.REQUEST_PROMPT
+          : interactionPolicy.Check.NO_NEED_TO_PROMPT,
+    ),
+  );
+
+  return policy;
+}
 
 /**
  * Build the OIDC provider Home Assistant's `auth_oidc` integration talks to.
@@ -53,9 +87,16 @@ export function createProvider(
       devInteractions: { enabled: false },
     },
     interactions: {
+      policy: createInteractionPolicy(),
       url(_ctx, interaction) {
         return `/interaction/${interaction.uid}`;
       },
+    },
+    ttl: {
+      // Keep the OP's SSO window from outliving the claims it is built from:
+      // the session is worthless once the cached account is gone, and letting it
+      // linger (14 days by default) only strands pilots on a stale session.
+      Session: config.ACCOUNT_TTL_SECONDS,
     },
     renderError: (ctx, out, error) => {
       const id = nanoid();
