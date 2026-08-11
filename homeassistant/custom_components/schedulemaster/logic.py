@@ -65,6 +65,8 @@ class PreheatEvent:
     comment: str | None  # flight comment / destination
     start: datetime  # when the heater turns on (flight start - lead)
     end: datetime  # flight start
+    flight_start: datetime  # actual scheduled flight start
+    flight_end: datetime | None  # actual scheduled flight end
 
 
 def project_events(
@@ -107,6 +109,8 @@ def project_events(
                 comment=res.destination or None,
                 start=res.start - preheat_lead,
                 end=res.start,
+                flight_start=res.start,
+                flight_end=res.end,
             )
         )
     return events

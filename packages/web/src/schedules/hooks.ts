@@ -20,10 +20,10 @@ export function useSchedules(connection: Connection | null) {
     queryFn: async () => {
       if (!connection) return [];
       const start = new Date();
-      // 7 days: user-created schedules are near-term, but ScheduleMaster preheats
-      // are known days ahead, so a short window would hide them (the component
-      // projects a 7-day lookahead).
-      const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+      // 2 days: user-created schedules are near-term, but ScheduleMaster preheats
+      // are known days ahead, so a short window would hide them. Assume they are
+      // relevant up to 2 days in the future.
+      const end = new Date(start.getTime() + 2 * 24 * 60 * 60 * 1000);
       return await listSchedules(start.toISOString(), end.toISOString());
     },
     enabled: !!connection,

@@ -50,6 +50,8 @@ def test_project_maps_and_applies_lead():
     assert ev.entity_id == "input_boolean.heater_1"
     assert ev.start == FLIGHT - LEAD
     assert ev.end == FLIGHT
+    assert ev.flight_start == FLIGHT
+    assert ev.flight_end == FLIGHT + timedelta(hours=2)
     assert ev.uid == "sm-k1"
     assert ev.username == "Amy Aviator"
     assert ev.user_id == "42"

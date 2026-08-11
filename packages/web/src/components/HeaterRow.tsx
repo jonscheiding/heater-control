@@ -2,7 +2,11 @@ import type { HassEntity } from "home-assistant-js-websocket";
 
 import { computeHeaterState, STATUS_LABELS } from "../heaters/state.js";
 import type { HeaterSchedule } from "../schedules/api.js";
-import { formatRemaining, formatUpcoming } from "../utils/format.js";
+import {
+  formatFlightTime,
+  formatRemaining,
+  formatUpcoming,
+} from "../utils/format.js";
 import { forecastAt, type ForecastEntry } from "../weather/forecast.js";
 import { CalendarButton } from "./CalendarButton.js";
 import styles from "./HeaterRow.module.css";
@@ -93,9 +97,14 @@ export function HeaterRow({
               new Date(s.startIso).getTime(),
             );
             const fromScheduleMaster = s.source === "schedulemaster";
-            const smLines = ["From Schedule Master", s.comment].filter(
-              (v): v is string => Boolean(v),
-            );
+            const flightLine = s.flightStartIso
+              ? `Flight ${formatFlightTime(s.flightStartIso, s.flightEndIso, now)}`
+              : null;
+            const smLines = [
+              "From Schedule Master",
+              flightLine,
+              s.comment,
+            ].filter((v): v is string => Boolean(v));
             return (
               <li key={s.uid} className={styles.scheduleItem}>
                 <span className={styles.scheduleText}>

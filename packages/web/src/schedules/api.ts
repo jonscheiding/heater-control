@@ -23,6 +23,9 @@ export interface HeaterSchedule {
   aircraftType: string | null;
   /** Flight comment (ScheduleMaster). */
   comment: string | null;
+  /** Actual scheduled flight start/end (ScheduleMaster). */
+  flightStartIso: string | null;
+  flightEndIso: string | null;
   /** Raw event summary ("Name - Tail"); handy for debugging/tooltip. */
   title: string | null;
 }
@@ -37,6 +40,8 @@ interface EventPayload {
   n_number?: string | null;
   aircraft_type?: string | null;
   comment?: string | null;
+  flight_start?: string | null;
+  flight_end?: string | null;
 }
 
 interface RawEvent {
@@ -115,10 +120,12 @@ async function listFromCalendar(
         nNumber: payload?.n_number ?? null,
         aircraftType: payload?.aircraft_type ?? null,
         comment: payload?.comment ?? null,
+        flightStartIso: payload?.flight_start ?? null,
+        flightEndIso: payload?.flight_end ?? null,
         title: e.summary?.trim() || null,
       };
     })
-    .filter((s): s is HeaterSchedule => s !== null);
+    .filter((s): s is HeaterSchedule => s !== null && s.startIso > startIso);
 }
 
 export async function listSchedules(

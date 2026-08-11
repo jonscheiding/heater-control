@@ -48,6 +48,8 @@ def _to_event(ev: PreheatEvent) -> CalendarEvent:
             "n_number": ev.n_number,
             "aircraft_type": ev.aircraft_type,
             "comment": ev.comment,
+            "flight_start": ev.flight_start.isoformat(),
+            "flight_end": ev.flight_end.isoformat() if ev.flight_end else None,
         }
     )
     return CalendarEvent(
