@@ -1,0 +1,55 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  color: var(--color-text-subtle);
+}
+
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  color: var(--color-text-muted);
+}
+
+.trigger > svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.375rem);
+  z-index: 10;
+  min-width: 10rem;
+  max-width: 25rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--color-dark);
+  color: var(--color-on-dark);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+}
+
+.line {
+  margin: 0;
+}
+
+.line + .line {
+  margin-top: 0.25rem;
+  color: var(--color-on-dark-muted);
+}

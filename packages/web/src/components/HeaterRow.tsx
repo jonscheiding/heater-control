@@ -8,6 +8,7 @@ import { CalendarButton } from "./CalendarButton.js";
 import styles from "./HeaterRow.module.css";
 import { PowerButton } from "./PowerButton.js";
 import { Button } from "./ui/Button.js";
+import { InfoPopover } from "./ui/InfoPopover.js";
 
 interface Props {
   switchEntity: HassEntity;
@@ -92,32 +93,32 @@ export function HeaterRow({
               new Date(s.startIso).getTime(),
             );
             const fromScheduleMaster = s.source === "schedulemaster";
+            const smLines = ["From Schedule Master", s.comment].filter(
+              (v): v is string => Boolean(v),
+            );
             return (
               <li key={s.uid} className={styles.scheduleItem}>
-                <span
-                  className={styles.scheduleText}
-                  title={s.title ?? undefined}
-                >
-                  {fromScheduleMaster && (
-                    <span className={styles.smBadge}>ScheduleMaster</span>
-                  )}
+                <span className={styles.scheduleText}>
                   Scheduled {formatUpcoming(s.startIso, now)}
                   {forecastTemp != null && (
                     <> · {Math.round(forecastTemp)}&deg;</>
                   )}
-                  {fromScheduleMaster && s.comment != null
-                    ? ` · ${s.comment}`
-                    : s.username != null && ` · by ${s.username}`}
+                  {s.username != null && ` · by ${s.username}`}
                 </span>
-                <Button
-                  onClick={() => {
-                    onCancelSchedule(s);
-                  }}
-                  disabled={cancellingUid === s.uid}
-                  aria-label={`Cancel schedule ${formatUpcoming(s.startIso, now)}`}
-                >
-                  Cancel
-                </Button>
+                <div className={styles.scheduleActions}>
+                  {fromScheduleMaster && (
+                    <InfoPopover lines={smLines} label="Schedule details" />
+                  )}
+                  <Button
+                    onClick={() => {
+                      onCancelSchedule(s);
+                    }}
+                    disabled={cancellingUid === s.uid}
+                    aria-label={`Cancel schedule ${formatUpcoming(s.startIso, now)}`}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </li>
             );
           })}
