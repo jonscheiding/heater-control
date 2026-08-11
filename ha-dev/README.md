@@ -18,9 +18,10 @@ so nothing is hardcoded.
   blueprints, self-onboards (`HC_AUTO_SETUP=1`), then launches Home Assistant
   **directly** (bypassing the base image's s6 init, which requires PID 1 —
   unavailable on Fly's managed-init Machines).
-- **`render_config.py`** — writes `/config/http.yaml` + `/config/auth_oidc.yaml`
-  from env (`OIDC_*`, `HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …), plus the
-  Fly-only keepalive package when `HC_KEEPALIVE_URL` is set.
+- **`render_config.py`** — writes `/config/auth_oidc.yaml` +
+  `/config/schedulemaster.yaml` from env (`OIDC_*`, `SM_*`) and seeds the HTTP
+  settings (`HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …) into `/config/.storage/http`,
+  plus the Fly-only keepalive package when `HC_KEEPALIVE_URL` is set.
 - **`setup.py`** — drives HA's REST API to onboard the owner and create the
   `local_calendar` the scheduling package needs. Idempotent; usable standalone.
 - **`docker-compose.yml`** — the single-service local dev stack.
@@ -39,6 +40,25 @@ so nothing is hardcoded.
 | `HEATERS_JSON`                                  | roster the heater packages render from        | `heaters.demo.json`    | `heaters.demo.json` |
 | `HC_AUTO_SETUP`                                 | self-onboard + create calendar on boot        | `1`                    | `1`                 |
 | `HC_KEEPALIVE_URL`                              | self-ping URL so timers outlive Fly auto_stop | unset                  | public HA URL       |
+
+### HTTP settings (CORS + proxy trust) — requires a 2026.8+ base image
+
+HA 2026.8 moved the `http` integration out of `configuration.yaml` into the UI
+(Settings → System → Network), stored in `.storage/http`; YAML stops working in
+2027.2. So `render_config.py` writes that store directly from
+`HA_CORS_ORIGINS` / `HA_USE_X_FORWARDED_FOR` / `HA_TRUSTED_PROXIES` before HA
+starts, into the **stable** slot with the YAML migration marked done.
+
+That last part matters: HA imports a leftover `http:` block into the **pending**
+slot instead — a 5-minute trial that a human has to confirm in the UI, or HA
+restarts and reverts it. A headless container has nobody to confirm, so it would
+lose its CORS origins five minutes after boot. Seeding the store avoids the trial
+entirely, and env stays the source of truth (the store is rewritten every start,
+so UI edits to these settings don't stick — change the env instead).
+
+Because the store didn't exist before 2026.8, the entrypoint **fails fast** on an
+older base image rather than booting without CORS. If you see that, rebuild:
+`docker compose build --pull`.
 
 ## Local dev (OIDC proxy on the host)
 

@@ -37,7 +37,9 @@ done
 # Base config: always refresh from the image (the image is the source of truth).
 cp "$SRC/configuration.yaml" "$CONFIG/configuration.yaml"
 
-# Env-driven includes (OIDC + http).
+# Env-driven config: the OIDC/ScheduleMaster includes, plus the HTTP settings
+# (CORS + proxy trust) seeded into .storage/http — HA 2026.8 moved those out of
+# YAML into the UI, so they have to be in place before HA starts.
 python3 "$SRC/render_config.py"
 
 # Packages (scheduling + heaters generated from the roster) and blueprints,

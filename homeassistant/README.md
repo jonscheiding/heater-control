@@ -10,14 +10,21 @@ demo.
 ## Layout
 
 - `configuration.yaml` — top-level config. Enables only what the app needs
-  (deliberately no `default_config`, for a faster boot), the packages dir, and two
-  **environment-rendered includes**: `http: !include http.yaml` and
-  `auth_oidc: !include auth_oidc.yaml`. Those two files are **not tracked** —
+  (deliberately no `default_config`, for a faster boot), the packages dir, and the
+  **environment-rendered includes** `auth_oidc: !include auth_oidc.yaml` and
+  `schedulemaster: !include schedulemaster.yaml`. Those files are **not tracked** —
   they're generated at container start from env vars by
-  `../ha-dev/render_config.py` (so the OIDC issuer, CORS origins, and reverse-proxy
-  trust differ per environment without editing this file). This layout is for the
-  **container**; on a prod HAOS box `deploy/push.sh --oidc` renders `auth_oidc.yaml`
-  and HTTP/CORS is configured in the UI (2026.8+), so `http.yaml` isn't used there.
+  `../ha-dev/render_config.py` (so the OIDC issuer and the ScheduleMaster account
+  differ per environment without editing this file). On a prod HAOS box
+  `deploy/push.sh --oidc` renders `auth_oidc.yaml` and `schedulemaster.yaml` is
+  written by hand.
+- **HTTP settings** (CORS origins + reverse-proxy trust) are deliberately **not**
+  in this file. HA 2026.8 moved the `http` integration out of YAML into the UI
+  (Settings → System → Network), backed by `.storage/http`; YAML stops working in
+  2027.2. The container seeds that store from `HA_CORS_ORIGINS` /
+  `HA_USE_X_FORWARDED_FOR` / `HA_TRUSTED_PROXIES` before HA starts
+  (`../ha-dev/render_config.py`), so it needs a base image on 2026.8+; on a HAOS
+  box it's a one-time setting in the UI (see [`../deploy/`](../deploy/)).
 - **Calendar event schema** — both calendars (`calendar.heater_schedules` and
   `calendar.schedulemaster`) use the same shape: the event **summary** is a human
   label (`"Name - Tail"`) for the HA calendar UI, and the **description** is a JSON
@@ -115,9 +122,11 @@ weekly (`schedulemaster-regression` workflow).
 ## What does NOT live here
 
 - HA runtime state: `home-assistant_v2.db`, logs, `.storage/`, registry files.
-- The generated `http.yaml` / `auth_oidc.yaml` / `schedulemaster.yaml` and
+- The generated `auth_oidc.yaml` / `schedulemaster.yaml` and
   `packages/heater_*.yaml` (rendered from env / the roster at container start; on
   a prod HAOS box the includes are created by hand / `deploy/push.sh`).
+- The HTTP/CORS settings — HA owns them in `.storage/http` (seeded from env in
+  the container, set in the UI on HAOS).
 - UI-created helpers/automations (persist in `.storage/`; recreate them here).
 - Secrets — the OIDC client secret flows via the `OIDC_CLIENT_SECRET` env var.
 

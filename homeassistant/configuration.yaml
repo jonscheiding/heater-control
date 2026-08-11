@@ -1,10 +1,10 @@
 # Home Assistant reference configuration for the heater-control stack.
 #
-# Environment-specific settings (OIDC issuer, CORS, trusted proxies) are NOT
-# hardcoded here — they are rendered at container start into http.yaml and
-# auth_oidc.yaml from environment variables (see ha-dev/render_config.py), so the
-# same config serves local dev (host proxy over http) and the Fly demo (proxy
-# over https). On a plain HAOS box, create those two files by hand.
+# Environment-specific settings (OIDC issuer, ScheduleMaster account) are NOT
+# hardcoded here — they are rendered at container start into auth_oidc.yaml and
+# schedulemaster.yaml from environment variables (see ha-dev/render_config.py),
+# so the same config serves local dev (host proxy over http) and the Fly demo
+# (proxy over https). On a plain HAOS box, create those files by hand.
 #
 # We deliberately do NOT use `default_config:` — it pulls in a lot of network
 # discovery + cloud/mobile integrations (ssdp, zeroconf, dhcp, usb, bluetooth,
@@ -21,8 +21,6 @@ analytics:
 system_health:
 sun:
 cloud:
-
-http: !include http.yaml
 
 # Automations / scenes / scripts.
 automation:
