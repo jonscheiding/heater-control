@@ -13,6 +13,8 @@ import styles from "./HeaterRow.module.css";
 import { PowerButton } from "./PowerButton.js";
 import { Button } from "./ui/Button.js";
 import { InfoPopover } from "./ui/InfoPopover.js";
+import { capitalize, sortBy } from "lodash-es";
+import { IconCalendar } from "./ui/IconCalendar.js";
 
 interface Props {
   switchEntity: HassEntity;
@@ -44,6 +46,7 @@ export function HeaterRow({
   cancellingUid,
 }: Props) {
   const name = switchEntity.attributes.friendly_name ?? switchEntity.entity_id;
+  const type = switchEntity.attributes.aircraft_type as string | undefined;
 
   const rawPower = powerSensor ? Number.parseFloat(powerSensor.state) : NaN;
   const powerWatts = Number.isFinite(rawPower) ? rawPower : null;
@@ -61,9 +64,7 @@ export function HeaterRow({
       : undefined;
   const remaining = finishesAt ? formatRemaining(finishesAt, now) : null;
 
-  const sortedSchedules = [...schedules].sort((a, b) =>
-    a.startIso.localeCompare(b.startIso),
-  );
+  const sortedSchedules = sortBy(schedules, (a) => a.startIso);
 
   return (
     <li className={styles.row}>
@@ -75,7 +76,10 @@ export function HeaterRow({
           onToggle={onToggle}
         />
         <div className={styles.info}>
-          <p className={styles.name}>{name}</p>
+          <p className={styles.name}>
+            {name}
+            {type && <span className={styles.typeLabel}>{type}</span>}
+          </p>
           <p className={styles.status}>{STATUS_LABELS[state]}</p>
           {remaining && (
             <p className={styles.remaining}>Auto-off in {remaining}</p>
@@ -108,7 +112,8 @@ export function HeaterRow({
             return (
               <li key={s.uid} className={styles.scheduleItem}>
                 <span className={styles.scheduleText}>
-                  Scheduled {formatUpcoming(s.startIso, now)}
+                  <IconCalendar />
+                  {capitalize(formatUpcoming(s.startIso, now))}
                   {forecastTemp != null && (
                     <> · {Math.round(forecastTemp)}&deg;</>
                   )}

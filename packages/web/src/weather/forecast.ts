@@ -1,4 +1,5 @@
 import { callService, type Connection } from "home-assistant-js-websocket";
+import { sortBy } from "lodash-es";
 
 export interface ForecastEntry {
   time: number; // epoch ms
@@ -47,8 +48,7 @@ export async function fetchHourlyForecast(
       }
     }
   }
-  entries.sort((a, b) => a.time - b.time);
-  return entries;
+  return sortBy(entries, (e) => e.time);
 }
 
 function formatHour(ms: number): string {

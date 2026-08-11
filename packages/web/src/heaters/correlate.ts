@@ -1,4 +1,5 @@
 import type { HassEntities, HassEntity } from "home-assistant-js-websocket";
+import { sortBy } from "lodash-es";
 
 const HEATER_PREFIXES = ["switch.heater_", "input_boolean.heater_"];
 
@@ -7,9 +8,10 @@ export function isHeater(entityId: string): boolean {
 }
 
 export function getHeaters(entities: HassEntities): HassEntity[] {
-  return Object.values(entities)
-    .filter((e) => isHeater(e.entity_id))
-    .sort((a, b) => a.entity_id.localeCompare(b.entity_id));
+  return sortBy(
+    Object.values(entities).filter((e) => isHeater(e.entity_id)),
+    (a) => a.entity_id,
+  );
 }
 
 function baseName(entityId: string): string {

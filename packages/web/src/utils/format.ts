@@ -15,7 +15,11 @@ function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export function formatUpcoming(startIso: string, now: number): string {
+export function formatUpcoming(
+  startIso: string,
+  now: number,
+  forceAbsolute?: boolean,
+): string {
   const start = new Date(startIso);
   const startDay = startOfDay(start);
   const today = startOfDay(new Date(now));
@@ -26,7 +30,7 @@ export function formatUpcoming(startIso: string, now: number): string {
 
   const minutes = Math.floor((start.getTime() - now) / (60 * 1000));
 
-  if (minutes < 4 * 60) {
+  if (minutes < 4 * 60 && !forceAbsolute) {
     const remaining = formatRemaining(startIso, now);
     if (remaining != null) {
       return remaining;
@@ -39,27 +43,6 @@ export function formatUpcoming(startIso: string, now: number): string {
   if (startDay.getTime() === tomorrow.getTime())
     return `tomorrow at ${timeStr}`;
 
-  const dayStr = start.toLocaleDateString([], {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-  return `${dayStr} at ${timeStr}`;
-}
-
-/** Absolute date-time (no relative "in 2h" shortcut) — for detail displays. */
-export function formatDateTime(iso: string, now: number): string {
-  const start = new Date(iso);
-  const startDay = startOfDay(start);
-  const today = startOfDay(new Date(now));
-  const timeStr = start.toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  if (startDay.getTime() === today.getTime()) return `today at ${timeStr}`;
-  const tomorrow = new Date(today.getTime() + 86_400_000);
-  if (startDay.getTime() === tomorrow.getTime())
-    return `tomorrow at ${timeStr}`;
   const dayStr = start.toLocaleDateString([], {
     weekday: "short",
     month: "short",
@@ -81,7 +64,7 @@ export function formatFlightTime(
   endIso: string | null,
   now: number,
 ): string {
-  const start = formatDateTime(startIso, now);
+  const start = formatUpcoming(startIso, now, true);
   return endIso ? `${start} – ${clockTime(endIso)}` : start;
 }
 

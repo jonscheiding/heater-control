@@ -22,6 +22,7 @@ import styles from "./HeaterList.module.css";
 import { HeaterRow } from "./HeaterRow.js";
 import { ScheduleDialog } from "./ScheduleDialog.js";
 import { WeatherBadge } from "./WeatherBadge.js";
+import { sortBy } from "lodash-es";
 
 interface Props {
   connection: Connection;
@@ -32,15 +33,6 @@ interface Props {
 
 function attrString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function byName(
-  a: { entity_id: string; attributes: { friendly_name?: string } },
-  b: { entity_id: string; attributes: { friendly_name?: string } },
-) {
-  const nameA = a.attributes.friendly_name ?? a.entity_id;
-  const nameB = b.attributes.friendly_name ?? b.entity_id;
-  return nameA.localeCompare(nameB);
 }
 
 export function HeaterList({ connection, entities, username, userId }: Props) {
@@ -82,7 +74,11 @@ export function HeaterList({ connection, entities, username, userId }: Props) {
     <>
       <WeatherBadge forecast={forecast} now={now} />
       <ul className={styles.list}>
-        {heaters.sort(byName).map((h) => {
+        {sortBy(
+          heaters,
+          (h) => h.attributes.aircraft_type,
+          (h) => h.attributes.friendly_name,
+        ).map((h) => {
           const isOn = h.state === "on";
           const name = h.attributes.friendly_name ?? h.entity_id;
           const nNumber = attrString(h.attributes.n_number);

@@ -22,6 +22,12 @@
   color: var(--color-text);
 }
 
+.typeLabel {
+  margin-left: 0.5rem;
+  font-weight: normal;
+  color: var(--color-text-muted);
+}
+
 .status {
   font-size: 0.875rem;
   color: var(--color-text-muted);
@@ -54,6 +60,14 @@
 
 .scheduleText {
   min-width: 0;
+}
+
+.scheduleText svg {
+  height: 1rem;
+  color: var(--color-text-muted);
+  display: inline-block;
+  margin-right: 0.15rem;
+  vertical-align: text-top;
 }
 
 .scheduleActions {
