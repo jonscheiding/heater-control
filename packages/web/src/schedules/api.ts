@@ -1,6 +1,7 @@
 import { callService, type Connection } from "home-assistant-js-websocket";
 
-import { haFetch } from "../ha/connection.js";
+import { getHaTimeZone, haFetch } from "../ha/connection.js";
+import { wallTimeToMs } from "../utils/time.js";
 
 export const SCHEDULES_CALENDAR = "calendar.heater_schedules";
 export const SCHEDULEMASTER_CALENDAR = "calendar.schedulemaster";
@@ -9,6 +10,11 @@ export type ScheduleSource = "local" | "schedulemaster";
 
 export interface HeaterSchedule {
   uid: string;
+  /**
+   * Every `*Iso` field here is a UTC instant (`toISOString()` form) — normalized
+   * on the way in by `toInstantIso`, since HA reports calendar times in *its*
+   * timezone. Safe to `new Date(...)` or compare as epoch ms.
+   */
   startIso: string;
   endIso: string;
   /** Calendar entity this event lives on — needed to delete it. */
@@ -52,12 +58,35 @@ interface RawEvent {
   end?: string | { dateTime?: string; date?: string };
 }
 
-function extractIso(
-  value: RawEvent["start"] | RawEvent["end"],
+const HAS_ZONE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+
+/**
+ * Resolve a calendar timestamp to an absolute instant, as UTC ISO.
+ *
+ * HA's calendar API reports a timed event as `{dateTime}` in *HA's* timezone
+ * (offset included, e.g. "2026-08-13T09:30:00-04:00") and an all-day one as
+ * `{date}` — a bare "2026-08-13" with no zone at all. A zone-less value read
+ * as-is is interpreted in the *browser's* zone, which shifts it whenever the
+ * browser and the HAOS box disagree. Everything downstream treats these fields
+ * as instants (`new Date(...)`, epoch comparisons), so pin the zone-less shapes
+ * to HA's timezone here and hand back one canonical format.
+ */
+function toInstantIso(
+  value: RawEvent["start"] | RawEvent["end"] | null,
+  haTimeZone: string | null,
 ): string | undefined {
-  if (typeof value === "string") return value;
-  if (value && typeof value === "object") return value.dateTime ?? value.date;
-  return undefined;
+  const raw =
+    typeof value === "string"
+      ? value
+      : value && typeof value === "object"
+        ? (value.dateTime ?? value.date)
+        : undefined;
+  if (!raw) return undefined;
+
+  const ms = HAS_ZONE.test(raw)
+    ? Date.parse(raw)
+    : wallTimeToMs(raw, haTimeZone);
+  return Number.isNaN(ms) ? undefined : new Date(ms).toISOString();
 }
 
 function parsePayload(description: string): EventPayload | null {
@@ -80,7 +109,10 @@ async function listFromCalendar(
     `/api/calendars/${calendarEntity}` +
     `?start=${encodeURIComponent(startIso)}` +
     `&end=${encodeURIComponent(endIso)}`;
-  const response = await haFetch(path);
+  const [response, haTimeZone] = await Promise.all([
+    haFetch(path),
+    getHaTimeZone(),
+  ]);
   if (!response.ok) {
     throw new Error(
       `Failed to list schedules for ${calendarEntity}: ${response.status} ${response.statusText}`,
@@ -91,10 +123,14 @@ async function listFromCalendar(
     ? (data as RawEvent[])
     : ((data as { events?: RawEvent[] }).events ?? []);
 
+  // HA returns events that *overlap* the window, so an already-running preheat
+  // comes back too; keep only ones that haven't started yet.
+  const windowStartMs = Date.parse(startIso);
+
   return raw
     .map((e): HeaterSchedule | null => {
-      const startVal = extractIso(e.start);
-      const endVal = extractIso(e.end);
+      const startVal = toInstantIso(e.start, haTimeZone);
+      const endVal = toInstantIso(e.end, haTimeZone);
       const description = (e.description ?? "").trim();
       const payload = parsePayload(description);
       // Structured events carry entity_id in the JSON; tolerate a legacy
@@ -120,12 +156,17 @@ async function listFromCalendar(
         nNumber: payload?.n_number ?? null,
         aircraftType: payload?.aircraft_type ?? null,
         comment: payload?.comment ?? null,
-        flightStartIso: payload?.flight_start ?? null,
-        flightEndIso: payload?.flight_end ?? null,
+        // Written by our own integration as UTC, but normalize anyway so every
+        // `*Iso` field on this object carries the same guarantee.
+        flightStartIso: toInstantIso(payload?.flight_start, haTimeZone) ?? null,
+        flightEndIso: toInstantIso(payload?.flight_end, haTimeZone) ?? null,
         title: e.summary?.trim() || null,
       };
     })
-    .filter((s): s is HeaterSchedule => s !== null && s.startIso > startIso);
+    .filter(
+      (s): s is HeaterSchedule =>
+        s !== null && Date.parse(s.startIso) > windowStartMs,
+    );
 }
 
 export async function listSchedules(

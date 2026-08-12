@@ -83,6 +83,29 @@ export function reauthenticate(): void {
   window.location.reload();
 }
 
+let timeZonePromise: Promise<string | null> | null = null;
+
+/**
+ * HA's configured timezone (e.g. "America/New_York"), or null if unavailable.
+ *
+ * Needed to resolve the zone-less timestamps HA's REST API reports, which are
+ * wall times in this zone. Cached for the session — it changes about never — but
+ * a failed lookup is not cached, so a later read retries.
+ */
+export function getHaTimeZone(): Promise<string | null> {
+  timeZonePromise ??= haFetch("/api/config")
+    .then(async (response) => {
+      if (!response.ok) throw new Error(`config fetch: ${response.status}`);
+      const config = (await response.json()) as { time_zone?: unknown };
+      return typeof config.time_zone === "string" ? config.time_zone : null;
+    })
+    .catch(() => {
+      timeZonePromise = null;
+      return null;
+    });
+  return timeZonePromise;
+}
+
 export async function haFetch(
   path: string,
   init?: RequestInit,
