@@ -3,6 +3,7 @@
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 [![Build and test](https://github.com/jonscheiding/heater-control/actions/workflows/build-test.yml/badge.svg)](https://github.com/jonscheiding/heater-control/actions/workflows/build-test.yml)
 [![ScheduleMaster regression](https://github.com/jonscheiding/heater-control/actions/workflows/schedulemaster-regression.yml/badge.svg)](https://github.com/jonscheiding/heater-control/actions/workflows/schedulemaster-regression.yml)
+[![Deploy to HAOS](https://github.com/jonscheiding/heater-control/actions/workflows/deploy-haos.yml/badge.svg)](https://github.com/jonscheiding/heater-control/actions/workflows/deploy-haos.yml)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/badbf539-ec87-487c-b894-99fbc3e286d1/deploy-status)](https://app.netlify.com/projects/heater-control/deploys)
 
 Remote control for airplane engine block heaters, so pilots can preheat an

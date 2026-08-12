@@ -30,6 +30,9 @@ concurrency:
   group: deploy-haos
   cancel-in-progress: false
 
+permissions:
+  id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -39,9 +42,9 @@ jobs:
       # Fail loudly if secrets are missing rather than half-deploying.
       - name: Verify deploy secrets are configured
         env:
-          HA_URL: ${{ secrets.HAOS_HA_URL }}
+          HA_URL: ${{ vars.HAOS_HA_URL }}
           HA_TOKEN: ${{ secrets.HAOS_HA_TOKEN }}
-          SSH_TARGET: ${{ secrets.HAOS_SSH_TARGET }}
+          SSH_TARGET: ${{ vars.HAOS_SSH_TARGET }}
           SSH_KEY: ${{ secrets.HAOS_SSH_KEY }}
         run: |
           for v in HA_URL HA_TOKEN SSH_TARGET SSH_KEY; do
@@ -52,11 +55,11 @@ jobs:
           done
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@v4
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-client-id: ${{ vars.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:ci
+          tags: tag:flying-neutrons
 
       - name: Install SSH key
         run: |
@@ -66,9 +69,9 @@ jobs:
 
       - name: Push config to HAOS
         env:
-          HA_URL: ${{ secrets.HAOS_HA_URL }}
+          HA_URL: ${{ vars.HAOS_HA_URL }}
           HA_TOKEN: ${{ secrets.HAOS_HA_TOKEN }}
-          SSH_TARGET: ${{ secrets.HAOS_SSH_TARGET }}
+          SSH_TARGET: ${{ vars.HAOS_SSH_TARGET }}
           SSH_PORT: ${{ vars.HAOS_SSH_PORT || '22' }}
           # Advanced SSH & Web Terminal mounts HA config at /homeassistant.
           REMOTE_CONFIG: ${{ vars.HAOS_REMOTE_CONFIG || '/homeassistant' }}
