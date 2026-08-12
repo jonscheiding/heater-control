@@ -7,5 +7,5 @@
     "noEmit": true,
     "plugins": [{ "name": "typescript-plugin-css-modules" }]
   },
-  "include": ["src/**/*", "vite.config.ts"]
+  "include": ["src/**/*", "test/**/*", "vite.config.ts", "vitest.config.ts"]
 }
