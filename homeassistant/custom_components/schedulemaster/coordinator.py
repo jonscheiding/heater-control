@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+import asyncio
+from datetime import datetime, timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
@@ -22,6 +23,12 @@ from .logic import (
 # Forecast granularity is hourly; don't trust a point more than this far from
 # the flight time (also filters flights beyond the forecast horizon).
 MAX_FORECAST_GAP = timedelta(minutes=90)
+
+# A read (e.g. the SPA listing the calendar) triggers a re-poll if the data is
+# older than this. Keeps the Fly demo fresh when it wakes from suspend — the
+# process (and its poll timer) freezes while suspended, so a resume would
+# otherwise serve stale data until the next interval.
+READ_STALE_AFTER = timedelta(minutes=10)
 
 
 class ScheduleMasterCoordinator(DataUpdateCoordinator[list[PreheatEvent]]):
@@ -56,6 +63,30 @@ class ScheduleMasterCoordinator(DataUpdateCoordinator[list[PreheatEvent]]):
         self._lookahead = timedelta(days=lookahead_days)
         self._weather_entity = weather_entity
         self._timezone = timezone
+        self._last_success: datetime | None = None
+        self._read_refresh_lock = asyncio.Lock()
+
+    async def async_refresh_if_stale(self) -> None:
+        """Re-poll if the data is older than READ_STALE_AFTER (called on read).
+
+        Uses wall-clock age, so a Fly resume (where the poll timer was frozen)
+        looks stale and refreshes. The lock + re-check collapses concurrent
+        reads into a single poll.
+        """
+        if self._api is None:
+            return
+
+        def fresh() -> bool:
+            return (
+                self._last_success is not None
+                and dt_util.utcnow() - self._last_success <= READ_STALE_AFTER
+            )
+
+        if fresh():
+            return
+        async with self._read_refresh_lock:
+            if not fresh():
+                await self.async_refresh()
 
     async def _async_update_data(self) -> list[PreheatEvent]:
         if self._api is None:
@@ -112,6 +143,7 @@ class ScheduleMasterCoordinator(DataUpdateCoordinator[list[PreheatEvent]]):
             "available" if forecast_lookup else "unavailable",
             f"; no heater for tail(s): {', '.join(unmapped)}" if unmapped else "",
         )
+        self._last_success = dt_util.utcnow()
         return events
 
     async def _async_forecast_lookup(self):

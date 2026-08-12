@@ -83,6 +83,9 @@ class ScheduleMasterCalendar(CoordinatorEntity[ScheduleMasterCoordinator], Calen
     async def async_get_events(
         self, hass: HomeAssistant, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
+        # A read is our signal that someone (the SPA) is looking — re-poll if the
+        # data has gone stale (e.g. the Fly demo just woke from suspend).
+        await self.coordinator.async_refresh_if_stale()
         return [
             _to_event(e)
             for e in self.coordinator.data or []
