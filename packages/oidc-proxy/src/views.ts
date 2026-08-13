@@ -17,6 +17,7 @@ const PAGE = (title: string, body: string) => `<!doctype html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="https://my.schedulemaster.com/favicon.ico" />
     <title>${escapeHtml(title)}</title>
     <style>
       :root { color-scheme: light dark; }
