@@ -14,6 +14,7 @@ import { PowerButton } from "./PowerButton.js";
 import { Button } from "./ui/Button.js";
 import { InfoPopover } from "./ui/InfoPopover.js";
 import { capitalize, sortBy } from "lodash-es";
+import cx from "classnames";
 import { IconCalendar } from "./ui/IconCalendar.js";
 
 interface Props {
@@ -80,9 +81,22 @@ export function HeaterRow({
             {name}
             {type && <span className={styles.typeLabel}>{type}</span>}
           </p>
-          <p className={styles.status}>{STATUS_LABELS[state]}</p>
-          {remaining && (
-            <p className={styles.remaining}>Auto-off in {remaining}</p>
+          <p
+            className={cx(
+              styles.status,
+              state === "unreachable" && styles.statusUnreachable,
+            )}
+          >
+            {STATUS_LABELS[state]}
+          </p>
+          {state === "unreachable" ? (
+            <p className={styles.remaining}>
+              Home Assistant can&rsquo;t reach this switch
+            </p>
+          ) : (
+            remaining && (
+              <p className={styles.remaining}>Auto-off in {remaining}</p>
+            )
           )}
         </div>
         <Button round onClick={() => onSchedulePreset("1h")}>

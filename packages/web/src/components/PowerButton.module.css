@@ -35,3 +35,16 @@
   background: var(--color-waiting);
   cursor: progress;
 }
+
+/* Doubled class outranks Button's generic .button:hover / .button:disabled
+   rules, which would otherwise repaint and fade the unreachable state. */
+.unreachable.unreachable,
+.unreachable.unreachable:hover,
+.unreachable.unreachable:disabled {
+  color: var(--color-text-subtle);
+  background: var(--color-unreachable);
+  border: 1px solid var(--color-border-strong);
+  box-shadow: none;
+  opacity: 1;
+  cursor: not-allowed;
+}
