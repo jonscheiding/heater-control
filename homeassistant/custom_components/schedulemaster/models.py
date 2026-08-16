@@ -18,6 +18,7 @@ class Reservation:
     pilot_last: str
     pilot_email: str
     destination: str
+    maint: bool
     user_id: str | None  # made_by_user
     raw: dict = field(default_factory=dict, compare=False, repr=False)
 
@@ -71,6 +72,7 @@ def parse_reservation(raw: dict, tz: tzinfo) -> Reservation | None:
         pilot_email=str(raw.get("email", "")).strip(),
         destination=str(raw.get("destination", "")).strip(),
         user_id=str(raw.get("made_by_user") or "").strip() or None,
+        maint=raw.get("maint"),
         raw=raw,
     )
 

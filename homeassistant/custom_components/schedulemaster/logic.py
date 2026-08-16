@@ -89,6 +89,8 @@ def project_events(
     for res in reservations:
         if res.key in suppressed:
             continue
+        if res.maint:
+            continue
         ref = nnumber_map.get(normalize_tail(res.n_number))
         if ref is None:
             continue
