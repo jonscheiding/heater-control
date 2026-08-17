@@ -32,7 +32,7 @@ jobs:
 
       # Offline unit tests for the schedulemaster HA custom component (pure
       # parsing + projection logic; no HA/network needed).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 

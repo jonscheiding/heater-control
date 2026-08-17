@@ -46,7 +46,7 @@ jobs:
       # The heater-control integration talks to the smapi.schedulemaster.com JSON
       # API (findToken + schlist), a different surface from the login scrape
       # above — smoke it too so contract drift there is caught weekly.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
