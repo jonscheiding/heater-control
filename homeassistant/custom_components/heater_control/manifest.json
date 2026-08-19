@@ -1,0 +1,11 @@
+{
+  "domain": "heater_control",
+  "name": "Heater Control",
+  "version": "0.1.0",
+  "documentation": "https://github.com/jonscheiding/heater-control",
+  "codeowners": ["@jonscheiding"],
+  "config_flow": true,
+  "dependencies": ["switch", "sensor", "number"],
+  "iot_class": "local_push",
+  "requirements": []
+}

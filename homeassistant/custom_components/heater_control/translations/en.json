@@ -1,0 +1,78 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a heater",
+        "menu_options": {
+          "real": "Real heater (wraps an existing switch)",
+          "virtual": "Virtual heater (simulated, for dev and demos)"
+        }
+      },
+      "real": {
+        "title": "Real heater",
+        "description": "Point at the switch that controls the heater. The power and node status sensors are optional but let the app tell \"on\" from \"on but unplugged\", and \"on\" from \"unreachable\".",
+        "data": {
+          "name": "Name",
+          "source_entity": "Switch",
+          "power_entity": "Power sensor",
+          "node_status_entity": "Node status sensor",
+          "n_number": "Tail number",
+          "aircraft_type": "Aircraft type",
+          "auto_off": "Turn off automatically after"
+        },
+        "data_description": {
+          "node_status_entity": "On Z-Wave devices, the diagnostic \"Node status\" sensor. Without it a dead node still reports its last known state.",
+          "n_number": "Matched against ScheduleMaster bookings. The leading N is optional.",
+          "auto_off": "Set to zero to never turn the heater off automatically."
+        }
+      },
+      "virtual": {
+        "title": "Virtual heater",
+        "description": "A simulated heater with no hardware behind it, for local development and the demo.",
+        "data": {
+          "name": "Name",
+          "virtual_watts": "Simulated wattage",
+          "n_number": "Tail number",
+          "aircraft_type": "Aircraft type",
+          "auto_off": "Turn off automatically after"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "That switch is already set up as a heater."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Heater settings",
+        "data": {
+          "name": "Name",
+          "source_entity": "Switch",
+          "power_entity": "Power sensor",
+          "node_status_entity": "Node status sensor",
+          "virtual_watts": "Simulated wattage",
+          "n_number": "Tail number",
+          "aircraft_type": "Aircraft type",
+          "auto_off": "Turn off automatically after"
+        }
+      }
+    },
+    "abort": {
+      "yaml_managed": "This heater is defined in configuration.yaml. Edit it there."
+    }
+  },
+  "entity": {
+    "number": {
+      "auto_off": { "name": "Auto-off after" },
+      "simulated_wattage": { "name": "Simulated wattage" }
+    },
+    "switch": {
+      "simulate_offline": { "name": "Simulate offline" }
+    },
+    "sensor": {
+      "power": { "name": "Power" },
+      "node_status": { "name": "Node status" }
+    }
+  }
+}
