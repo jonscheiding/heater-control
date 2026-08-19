@@ -20,6 +20,7 @@ import { IconCalendar } from "./ui/IconCalendar.js";
 interface Props {
   switchEntity: HassEntity;
   powerSensor: HassEntity | undefined;
+  nodeStatusSensor: HassEntity | undefined;
   timer: HassEntity | undefined;
   schedules: HeaterSchedule[];
   forecast: ForecastEntry[];
@@ -35,6 +36,7 @@ interface Props {
 export function HeaterRow({
   switchEntity,
   powerSensor,
+  nodeStatusSensor,
   timer,
   schedules,
   forecast,
@@ -56,6 +58,7 @@ export function HeaterRow({
     switchState: switchEntity.state,
     switchLastChangedIso: switchEntity.last_changed,
     powerWatts,
+    nodeStatus: nodeStatusSensor?.state ?? null,
     now,
   });
 

@@ -13,8 +13,12 @@ Each entry:
                               `input_boolean.heater_*`)
     label                     friendly name shown in the UI
     duration                  auto-off window: HH:MM:SS, or 3h / 90m (default 2h)
-    simulated                 true → input_boolean + fake power; false/absent →
-                              real switch (device provides switch.<id> + power)
+    simulated                 true → input_boolean + fake power + a fake
+                              node-status sensor with an offline toggle;
+                              false/absent → real switch (device provides
+                              switch.<id> + power, and — if it is a Z-Wave
+                              device — sensor.<id>_node_status once its
+                              diagnostic node-status sensor is renamed to match)
     simulated_power_initial   simulated watts (simulated only, default 1200)
     icon                      input_boolean icon (simulated only, default radiator)
     switch                    real switch entity (real only, default switch.<id>)
@@ -63,11 +67,22 @@ def render(h):
 
     blocks = []
     if simulated:
+        # The second toggle fakes an unreachable device: flip it and the
+        # generated node-status sensor below reports `dead`, exactly like a
+        # Z-Wave node that dropped off the mesh.
+        #
+        # It is deliberately NOT named `{hid}_...`: the SPA treats *every*
+        # `input_boolean.heater_*` / `switch.heater_*` entity as a heater, so a
+        # helper inside that namespace shows up as a phantom heater row. Helpers
+        # in other domains (the input_number below) are safe either way.
         blocks.append(
             f"input_boolean:\n"
             f"  {hid}:\n"
             f"    name: {_yq(label)}\n"
             f"    icon: {h.get('icon', 'mdi:radiator')}\n"
+            f"  simulated_offline_{hid}:\n"
+            f"    name: {_yq(f'{label} simulated offline')}\n"
+            f"    icon: mdi:lan-disconnect\n"
         )
     blocks.append(
         f"timer:\n"
@@ -97,6 +112,11 @@ def render(h):
             f'    unit_of_measurement: "W"\n'
             f"    icon: mdi:flash\n"
         )
+        # The node-status sensor is named by entity id, not by label: the SPA
+        # correlates it as `sensor.<id>_node_status` (a real Z-Wave heater gets
+        # the same treatment by renaming its diagnostic node-status sensor to
+        # that id), and a template entity's entity id comes from its `name`.
+        # The friendly name is restored via `customize` below.
         blocks.append(
             f"template:\n"
             f"  - sensor:\n"
@@ -110,22 +130,39 @@ def render(h):
             f"          {{% else %}}\n"
             f"            0\n"
             f"          {{% endif %}}\n"
+            f"      - name: {_yq(f'{hid}_node_status')}\n"
+            f"        unique_id: {hid}_node_status\n"
+            f"        state: >\n"
+            f"          {{% if is_state('input_boolean.simulated_offline_{hid}', 'on') %}}\n"
+            f"            dead\n"
+            f"          {{% else %}}\n"
+            f"            alive\n"
+            f"          {{% endif %}}\n"
         )
     # Entity attributes via `homeassistant: customize:`. The target is whichever
     # entity the SPA and automations act on (input_boolean for simulated, the real
     # switch otherwise). Real switches also get their display name overridden here
     # (simulated ones carry `name:` on the input_boolean instead). n_number /
     # aircraft_type are optional metadata the schedulemaster integration reads.
-    customize = {}
+    attrs = {}
     if not simulated:
-        customize["friendly_name"] = label
+        attrs["friendly_name"] = label
     if h.get("n_number"):
-        customize["n_number"] = str(h["n_number"]).strip()
+        attrs["n_number"] = str(h["n_number"]).strip()
     if h.get("aircraft_type"):
-        customize["aircraft_type"] = str(h["aircraft_type"]).strip()
+        attrs["aircraft_type"] = str(h["aircraft_type"]).strip()
+    customize = {toggle: attrs} if attrs else {}
+    if simulated:
+        customize[f"sensor.{hid}_node_status"] = {
+            "friendly_name": f"{label} node status"
+        }
     if customize:
-        attrs = "".join(f"      {k}: {_yq(v)}\n" for k, v in customize.items())
-        blocks.append(f"homeassistant:\n  customize:\n    {toggle}:\n{attrs}")
+        entries = "".join(
+            f"    {entity}:\n"
+            + "".join(f"      {k}: {_yq(v)}\n" for k, v in values.items())
+            for entity, values in customize.items()
+        )
+        blocks.append(f"homeassistant:\n  customize:\n{entries}")
 
     return "\n".join(blocks)
 

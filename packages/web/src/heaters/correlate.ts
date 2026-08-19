@@ -26,6 +26,22 @@ export function findPowerSensor(
   return entities[`sensor.${baseName(switchId)}_power`];
 }
 
+/**
+ * Z-Wave JS keeps a switch entity *available* (reporting its last known state)
+ * even after the node stops answering — its availability tracks the driver and
+ * the node's interview, not whether the device is currently reachable. The
+ * reachability signal lives in the node's diagnostic status sensor instead, so
+ * we correlate one by convention: rename it to `sensor.<heater>_node_status` in
+ * HA and the SPA picks it up. Absent for non-Z-Wave heaters — those go
+ * `unavailable` on their own.
+ */
+export function findNodeStatusSensor(
+  switchId: string,
+  entities: HassEntities,
+): HassEntity | undefined {
+  return entities[`sensor.${baseName(switchId)}_node_status`];
+}
+
 export function findAutoOffTimer(
   switchId: string,
   entities: HassEntities,

@@ -72,6 +72,27 @@ For a **real** heater, drop `simulated` — the device provides `switch.<id>` an
 power sensor, and the package adds only the timer + auto-off. The new entities
 appear automatically; the SPA picks them up over WebSocket with no code change.
 
+## Reachability (`sensor.<id>_node_status`)
+
+Z-Wave JS does **not** mark a switch entity `unavailable` when its node stops
+answering — entity availability there tracks the driver connection and the node
+interview, not the node's current status, so `switch.heater_1` keeps serving its
+last known `on`/`off` and the SPA would happily offer to toggle a device that
+can't hear it. The reachability signal lives in the node's diagnostic **Node
+status** sensor (`alive` / `awake` / `asleep` / `dead` / `unknown`).
+
+So the SPA correlates one by convention: **rename that sensor to
+`sensor.<heater id>_node_status`** (Settings → Devices → the switch's device →
+Node status → gear → Entity ID; e.g. `sensor.node_2_node_status` →
+`sensor.heater_1_node_status`). Anything other than alive/awake/asleep renders
+the heater as "Unreachable" with its power button disabled. The sensor is
+optional — heaters without one fall back to the switch entity's own
+`unavailable`/`unknown` state, which is what non-Z-Wave integrations do.
+
+Simulated heaters generate their own `sensor.<id>_node_status` from an
+`input_boolean.<id>_simulated_offline` toggle, so dev and the Fly demo can
+exercise the same path (see [`../ha-dev/README.md`](../ha-dev/README.md)).
+
 ## ScheduleMaster integration
 
 `custom_components/schedulemaster/` auto-preheats aircraft from ScheduleMaster

@@ -90,6 +90,32 @@ state lives in the gitignored `ha-dev/.dev/`. Full reset:
 
 Debugging the proxy: `pnpm --filter @heater-control/oidc-proxy exec tsx --inspect --watch src/server.ts` and attach your Node debugger.
 
+### Simulating an unreachable heater
+
+Every simulated heater carries an `input_boolean.simulated_offline_<id>` toggle
+(named outside the `heater_*` namespace on purpose — the SPA reads every
+`input_boolean.heater_*` as a heater, so a helper named `heater_2_…` would show
+up as a phantom heater row).
+Turning it on flips the generated `sensor.<id>_node_status` to `dead` — the same
+value a real Z-Wave node reports once it drops off the mesh (see
+[`../homeassistant/README.md`](../homeassistant/README.md#reachability-sensorid_node_status))
+— and the SPA renders that heater as "Unreachable" with its power button
+disabled. Turn it back off to recover.
+
+Flip it in HA (Developer Tools → States, or the entity's more-info dialog), or
+from the shell:
+
+```bash
+# `<token>` = a long-lived token from Profile → Security
+curl -X POST http://localhost:8123/api/services/input_boolean/turn_on \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"entity_id": "input_boolean.simulated_offline_heater_2"}'
+```
+
+Note this is only needed because a _simulated_ heater has no device to unplug —
+and a real Z-Wave switch that you do unplug behaves the same way, since Z-Wave JS
+leaves the switch entity available with its last known state either way.
+
 ## Fly demo (scale-to-zero, small persistent volume)
 
 A hosted demo that costs ~nothing idle. It scales to zero, but keeps a small

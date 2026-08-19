@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useNow } from "../ha/hooks.js";
 import {
   findAutoOffTimer,
+  findNodeStatusSensor,
   findPowerSensor,
   getHeaters,
 } from "../heaters/correlate.js";
@@ -91,6 +92,7 @@ export function HeaterList({ connection, entities, username, userId }: Props) {
               key={h.entity_id}
               switchEntity={h}
               powerSensor={findPowerSensor(h.entity_id, entities)}
+              nodeStatusSensor={findNodeStatusSensor(h.entity_id, entities)}
               timer={findAutoOffTimer(h.entity_id, entities)}
               schedules={heaterSchedules}
               forecast={forecast}

@@ -35,6 +35,37 @@ describe("computeHeaterState", () => {
     );
   });
 
+  // Z-Wave JS keeps the switch entity available and reporting its last known
+  // state after the node dies, so these cases hinge entirely on nodeStatus.
+  it("flags a dead Z-Wave node even though the switch still reports a state", () => {
+    expect(state({ switchState: "on", nodeStatus: "dead" })).toBe(
+      "unreachable",
+    );
+    expect(state({ switchState: "off", nodeStatus: "dead" })).toBe(
+      "unreachable",
+    );
+  });
+
+  it("treats a node status HA cannot read as unreachable", () => {
+    expect(state({ switchState: "on", nodeStatus: "unavailable" })).toBe(
+      "unreachable",
+    );
+    expect(state({ switchState: "on", nodeStatus: "unknown" })).toBe(
+      "unreachable",
+    );
+  });
+
+  it("accepts nodes the mesh can still deliver to", () => {
+    for (const nodeStatus of ["alive", "awake", "asleep"]) {
+      expect(state({ switchState: "on", nodeStatus })).toBe("on");
+    }
+  });
+
+  it("ignores reachability when there is no node-status sensor", () => {
+    expect(state({ switchState: "on", nodeStatus: null })).toBe("on");
+    expect(state({ switchState: "on" })).toBe("on");
+  });
+
   it("waits out the grace period before calling it unplugged", () => {
     const justOn = new Date(NOW - 1000).toISOString();
     expect(

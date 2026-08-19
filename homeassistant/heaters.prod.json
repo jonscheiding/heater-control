@@ -4,8 +4,7 @@
     "label": "N628FN",
     "aircraft_type": "C182",
     "n_number": "628FN",
-    "simulated": true,
-    "simulated_power_initial": 0
+    "simulated": false
   },
   {
     "id": "heater_2",
