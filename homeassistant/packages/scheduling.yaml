@@ -17,8 +17,35 @@ automation:
           desc: "{{ trigger.calendar_event.description or '' }}"
           payload: >-
             {{ desc | from_json if desc.startswith('{') else {'entity_id': desc} }}
-      - condition: template
-        value_template: "{{ payload.entity_id | default('') | length > 0 }}"
-      - service: homeassistant.turn_on
-        target:
-          entity_id: "{{ payload.entity_id }}"
+          target_entity: "{{ payload.entity_id | default('') }}"
+      # The target is baked into the event when the schedule is created, so a
+      # rename between then and now leaves it pointing at nothing. turn_on fails
+      # silently on a missing entity, so check first and say so in the log.
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ target_entity | length == 0 }}"
+            sequence:
+              - service: system_log.write
+                data:
+                  level: warning
+                  logger: heater_schedules
+                  message: >-
+                    Calendar event "{{ trigger.calendar_event.summary }}" has no
+                    entity_id in its description; not turning anything on.
+          - conditions:
+              - condition: template
+                value_template: "{{ states[target_entity] is none }}"
+            sequence:
+              - service: system_log.write
+                data:
+                  level: warning
+                  logger: heater_schedules
+                  message: >-
+                    Calendar event "{{ trigger.calendar_event.summary }}" targets
+                    unknown entity {{ target_entity }}; not turning anything on.
+                    The schedule probably predates a heater rename.
+        default:
+          - service: homeassistant.turn_on
+            target:
+              entity_id: "{{ target_entity }}"
