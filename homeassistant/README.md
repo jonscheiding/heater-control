@@ -90,8 +90,29 @@ optional — heaters without one fall back to the switch entity's own
 `unavailable`/`unknown` state, which is what non-Z-Wave integrations do.
 
 Simulated heaters generate their own `sensor.<id>_node_status` from an
-`input_boolean.<id>_simulated_offline` toggle, so dev and the Fly demo can
-exercise the same path (see [`../ha-dev/README.md`](../ha-dev/README.md)).
+`input_boolean.simulated_offline_<id>` toggle, so dev and the Fly demo can
+exercise the same path (see [`../ha-dev/README.md`](../ha-dev/README.md)). That
+helper is deliberately named outside the `heater_*` namespace — the SPA reads
+every `input_boolean.heater_*` as a heater, so `heater_2_simulated_offline`
+would appear as a phantom heater row.
+
+### Entity ids are frozen at creation
+
+The SPA correlates a heater's companions **by entity id** —
+`sensor.<id>_power`, `sensor.<id>_node_status`, `timer.<id>_autooff` — so the
+generated template sensors are named `heater_<n>_power` /
+`heater_<n>_node_status` and get their display names back through
+`customize: friendly_name`. That indirection is deliberate: a template entity's
+entity id is slugified from its `name`, and the entity registry pins it at first
+creation, keyed by `unique_id`. Naming the sensors after the label instead
+produced ids like `sensor.c182_n9525d_power` that the SPA never found — and
+editing the label afterwards did **not** move them (nor the registry's
+`original_name`, so those entities also kept showing a stale friendly name).
+
+The practical consequence: an entity keeps whatever id it was born with. Fixing
+one means renaming it in the UI (Settings → Devices & Services → Entities → the
+entity → gear → Entity ID) or deleting its registry entry so it gets recreated.
+For the dev container, `docker compose down && rm -rf .dev` does it wholesale.
 
 ## ScheduleMaster integration
 

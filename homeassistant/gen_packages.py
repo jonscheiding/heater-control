@@ -112,15 +112,18 @@ def render(h):
             f'    unit_of_measurement: "W"\n'
             f"    icon: mdi:flash\n"
         )
-        # The node-status sensor is named by entity id, not by label: the SPA
-        # correlates it as `sensor.<id>_node_status` (a real Z-Wave heater gets
-        # the same treatment by renaming its diagnostic node-status sensor to
-        # that id), and a template entity's entity id comes from its `name`.
-        # The friendly name is restored via `customize` below.
+        # Both template sensors are named by entity id, not by label. A template
+        # entity's entity id is slugified from its `name`, and it is frozen in
+        # the entity registry at first creation — so naming these after the
+        # label yields ids the SPA can't correlate (it looks for
+        # `sensor.<id>_power` / `sensor.<id>_node_status`), and later label edits
+        # can't move them. The display names are restored via `customize` below.
+        # A real Z-Wave heater gets the same ids by renaming the device's power
+        # and node-status sensors to match.
         blocks.append(
             f"template:\n"
             f"  - sensor:\n"
-            f"      - name: {_yq(f'{label} power')}\n"
+            f"      - name: {_yq(f'{hid}_power')}\n"
             f"        unique_id: {hid}_power\n"
             f'        unit_of_measurement: "W"\n'
             f"        device_class: power\n"
@@ -153,6 +156,7 @@ def render(h):
         attrs["aircraft_type"] = str(h["aircraft_type"]).strip()
     customize = {toggle: attrs} if attrs else {}
     if simulated:
+        customize[f"sensor.{hid}_power"] = {"friendly_name": f"{label} power"}
         customize[f"sensor.{hid}_node_status"] = {
             "friendly_name": f"{label} node status"
         }

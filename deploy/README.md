@@ -74,13 +74,19 @@ heater, pair the device in HA as `switch.<id>`, then drop `simulated`
 the device's switch and the device supplies the power sensor. The new entities
 appear on reload; the SPA picks them up over WebSocket with no code change.
 
-While renaming the device's entities, also rename its diagnostic **Node status**
-sensor (Z-Wave devices) to `sensor.<id>_node_status` — e.g.
-`sensor.node_2_node_status` → `sensor.heater_1_node_status`. Z-Wave JS leaves a
-switch entity _available_ with its last known state when the node goes dead, so
-that sensor is the only thing that tells the SPA the heater dropped off the mesh;
-without it the app shows a stale On/Off and an enabled power button. Details in
+While renaming the device's entities, give its **power** sensor the id
+`sensor.<id>_power` and — on Z-Wave devices — its diagnostic **Node status**
+sensor the id `sensor.<id>_node_status` (e.g. `sensor.node_2_node_status` →
+`sensor.heater_1_node_status`). The SPA correlates both by id: without the power
+sensor it can't tell "on" from "on but unplugged", and without the node-status
+sensor it shows a stale On/Off with an enabled power button after the node dies,
+because Z-Wave JS leaves the switch entity _available_ with its last known state.
+Details in
 [`../homeassistant/README.md`](../homeassistant/README.md#reachability-sensorid_node_status).
+
+Entity ids are frozen at first creation, so rename before relying on them — and
+note that changing a heater's `label` later never moves an id that was minted
+from the old label.
 
 ## Push updates
 

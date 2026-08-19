@@ -18,6 +18,11 @@ on:
   push:
     branches: [main]
     paths:
+      # The heater packages are generated at deploy time and gitignored, so a
+      # roster or generator edit is what actually changes them — watch those
+      # instead (packages/ stays listed for scheduling.yaml, which is tracked).
+      - "homeassistant/heaters.prod.json"
+      - "homeassistant/gen_packages.py"
       - "homeassistant/packages/**"
       - "homeassistant/blueprints/**"
       - "homeassistant/custom_components/**"
