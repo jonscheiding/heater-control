@@ -23,6 +23,7 @@ export interface Heater {
   powerWatts: number | null;
   reachable: boolean;
   autoOffAtIso: string | null;
+  simulated: boolean;
 }
 
 function attrString(value: unknown): string | null {
@@ -44,7 +45,11 @@ function attrTimestamp(value: unknown): string | null {
 }
 
 export function isHeater(entity: HassEntity): boolean {
-  return (entity.attributes as Record<string, unknown>).heater === true;
+  return entity.attributes.heater === true;
+}
+
+export function isSimulated(entity: HassEntity): boolean {
+  return entity.attributes.source_entity == null;
 }
 
 export function toHeater(entity: HassEntity): Heater {
@@ -62,6 +67,7 @@ export function toHeater(entity: HassEntity): Heater {
     // fleet — only an explicit false marks a heater unreachable.
     reachable: attrs.reachable !== false,
     autoOffAtIso: attrTimestamp(attrs.auto_off_at),
+    simulated: isSimulated(entity),
   };
 }
 

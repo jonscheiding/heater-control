@@ -18,6 +18,7 @@ function state(overrides: Partial<Heater>) {
     powerWatts: null,
     reachable: true,
     autoOffAtIso: null,
+    simulated: true,
     ...overrides,
   };
   // `isOn` is derived, so keep it consistent unless a test overrides it.

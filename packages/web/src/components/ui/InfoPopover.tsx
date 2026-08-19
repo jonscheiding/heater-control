@@ -8,13 +8,16 @@ interface Props {
   lines: string[];
   /** Accessible label for the trigger button. */
   label: string;
+  icon?: () => React.ReactElement;
 }
 
 /** An info icon that toggles a small popover on click — works on touch, where
  * native hover tooltips don't. Closes on outside tap or Escape. */
-export function InfoPopover({ lines, label }: Props) {
+export function InfoPopover({ lines, label, icon }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
+
+  const IconComponent = icon ?? IconInfo;
 
   useEffect(() => {
     if (!open) return;
@@ -45,7 +48,7 @@ export function InfoPopover({ lines, label }: Props) {
           setOpen((v) => !v);
         }}
       >
-        <IconInfo />
+        <IconComponent />
       </button>
       {open && (
         <div className={styles.popover} role="tooltip">

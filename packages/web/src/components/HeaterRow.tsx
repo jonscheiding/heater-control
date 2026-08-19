@@ -16,6 +16,7 @@ import { InfoPopover } from "./ui/InfoPopover.js";
 import { capitalize, sortBy } from "lodash-es";
 import cx from "classnames";
 import { IconCalendar } from "./ui/IconCalendar.js";
+import { IconTestTube } from "./ui/IconTestTube.js";
 
 interface Props {
   heater: Heater;
@@ -89,6 +90,17 @@ export function HeaterRow({
             )
           )}
         </div>
+        {heater.simulated && (
+          <div className={styles.simulationIcon}>
+            <InfoPopover
+              lines={[
+                "This heater is simulated. It does not control a physical device.",
+              ]}
+              label="Simulated Device"
+              icon={IconTestTube}
+            />
+          </div>
+        )}
         <Button round onClick={() => onSchedulePreset("1h")}>
           1H
         </Button>

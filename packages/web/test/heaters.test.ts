@@ -65,6 +65,7 @@ describe("toHeater", () => {
       powerWatts: 1183.5,
       reachable: true,
       autoOffAtIso: "2026-08-12T18:16:00+00:00",
+      simulated: true,
     });
   });
 
