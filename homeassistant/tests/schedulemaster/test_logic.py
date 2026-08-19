@@ -13,7 +13,7 @@ FLIGHT = datetime(2026, 1, 15, 14, 0, tzinfo=UTC)  # cold January flight
 MAP = {"N123AB": HeaterRef("input_boolean.heater_1", "C172")}
 
 
-def _res(key="k1", n="N123AB", start=FLIGHT):
+def _res(key="k1", n="N123AB", start=FLIGHT, maint=False):
     return Reservation(
         key=key,
         n_number=n,
@@ -24,6 +24,7 @@ def _res(key="k1", n="N123AB", start=FLIGHT):
         pilot_email="amy@example.com",
         destination="KJYO",
         user_id="42",
+        maint=maint,
     )
 
 
@@ -59,6 +60,14 @@ def test_project_maps_and_applies_lead():
     assert ev.n_number == "N123AB"
     assert ev.aircraft_type == "C172"
     assert ev.comment == "KJYO"
+
+
+def test_project_skips_maintenance_reservations():
+    events = logic.project_events(
+        [_res(maint=True)], MAP, set(), None,
+        preheat_lead=LEAD, warm_threshold_f=45.0,
+    )
+    assert events == []
 
 
 def test_project_skips_unmapped_tail():
