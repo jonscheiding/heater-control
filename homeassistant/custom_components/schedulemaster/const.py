@@ -29,8 +29,8 @@ DEFAULT_WEATHER_ENTITY = "weather.forecast_home"
 # Only airplane reservations get a heater.
 RES_LIST = "CATEGORY->AIRPLANE,"
 
-# Attributes the heater packages carry (see homeassistant/gen_packages.py): the
-# aircraft tail number (used to map a booking to a heater) and its type.
+# Attributes the heater_control wrapper entities carry: the aircraft tail number
+# (used to map a booking to a heater) and its type.
 ATTR_N_NUMBER = "n_number"
 ATTR_AIRCRAFT_TYPE = "aircraft_type"
 

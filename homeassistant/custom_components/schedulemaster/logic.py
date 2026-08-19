@@ -34,8 +34,8 @@ def build_nnumber_map(
     """Map normalized tail number -> HeaterRef from entity attributes.
 
     ``entities`` is an iterable of ``(entity_id, attributes)``. Any entity that
-    carries a non-empty ``n_number`` attribute is eligible (the heater packages
-    set it via ``homeassistant: customize:``). First one wins on a collision.
+    carries a non-empty ``n_number`` attribute is eligible (the heater_control
+    integration publishes it). First one wins on a collision.
     """
     out: dict[str, HeaterRef] = {}
     for entity_id, attrs in entities:

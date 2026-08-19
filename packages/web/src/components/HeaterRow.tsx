@@ -1,4 +1,4 @@
-import type { HassEntity } from "home-assistant-js-websocket";
+import type { Heater } from "../heaters/heater.js";
 
 import { computeHeaterState, STATUS_LABELS } from "../heaters/state.js";
 import type { HeaterSchedule } from "../schedules/api.js";
@@ -18,10 +18,7 @@ import cx from "classnames";
 import { IconCalendar } from "./ui/IconCalendar.js";
 
 interface Props {
-  switchEntity: HassEntity;
-  powerSensor: HassEntity | undefined;
-  nodeStatusSensor: HassEntity | undefined;
-  timer: HassEntity | undefined;
+  heater: Heater;
   schedules: HeaterSchedule[];
   forecast: ForecastEntry[];
   now: number;
@@ -34,10 +31,7 @@ interface Props {
 }
 
 export function HeaterRow({
-  switchEntity,
-  powerSensor,
-  nodeStatusSensor,
-  timer,
+  heater,
   schedules,
   forecast,
   now,
@@ -48,25 +42,17 @@ export function HeaterRow({
   onCancelSchedule,
   cancellingUid,
 }: Props) {
-  const name = switchEntity.attributes.friendly_name ?? switchEntity.entity_id;
-  const type = switchEntity.attributes.aircraft_type as string | undefined;
+  const name = heater.name;
+  const type = heater.aircraftType;
 
-  const rawPower = powerSensor ? Number.parseFloat(powerSensor.state) : NaN;
-  const powerWatts = Number.isFinite(rawPower) ? rawPower : null;
+  const state = computeHeaterState({ heater, now });
 
-  const state = computeHeaterState({
-    switchState: switchEntity.state,
-    switchLastChangedIso: switchEntity.last_changed,
-    powerWatts,
-    nodeStatus: nodeStatusSensor?.state ?? null,
-    now,
-  });
-
-  const finishesAt =
-    timer?.state === "active"
-      ? (timer.attributes.finishes_at as string | undefined)
-      : undefined;
-  const remaining = finishesAt ? formatRemaining(finishesAt, now) : null;
+  // `auto_off_at` is null whenever nothing is armed, and formatRemaining
+  // returns null for a timestamp already past, so a stale value degrades to
+  // "no countdown" rather than to a negative one.
+  const remaining = heater.autoOffAtIso
+    ? formatRemaining(heater.autoOffAtIso, now)
+    : null;
 
   const sortedSchedules = sortBy(schedules, (a) => a.startIso);
 
@@ -98,7 +84,8 @@ export function HeaterRow({
             </p>
           ) : (
             remaining && (
-              <p className={styles.remaining}>Auto-off in {remaining}</p>
+              // formatRemaining already reads "in 1h 30m".
+              <p className={styles.remaining}>Auto-off {remaining}</p>
             )
           )}
         </div>

@@ -5,12 +5,7 @@ import {
 import { useState } from "react";
 
 import { useNow } from "../ha/hooks.js";
-import {
-  findAutoOffTimer,
-  findNodeStatusSensor,
-  findPowerSensor,
-  getHeaters,
-} from "../heaters/correlate.js";
+import { getHeaters } from "../heaters/heater.js";
 import { useToggleHeater } from "../heaters/hooks.js";
 import {
   useCreateSchedule,
@@ -30,10 +25,6 @@ interface Props {
   entities: HassEntities;
   username: string;
   userId: string | null;
-}
-
-function attrString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 export function HeaterList({ connection, entities, username, userId }: Props) {
@@ -59,9 +50,9 @@ export function HeaterList({ connection, entities, username, userId }: Props) {
     return (
       <>
         <div className={styles.empty}>
-          No heaters found. Expected entities matching{" "}
-          <code className={styles.code}>switch.heater_*</code> or{" "}
-          <code className={styles.code}>input_boolean.heater_*</code>.
+          No heaters found. Add one in Home Assistant under Settings &rarr;
+          Devices &amp; services &rarr; Add integration &rarr;{" "}
+          <code className={styles.code}>Heater Control</code>.
         </div>
       </>
     );
@@ -77,38 +68,35 @@ export function HeaterList({ connection, entities, username, userId }: Props) {
       <ul className={styles.list}>
         {sortBy(
           heaters,
-          (h) => h.attributes.aircraft_type,
-          (h) => h.attributes.friendly_name,
+          (h) => h.aircraftType ?? "",
+          (h) => h.name,
         ).map((h) => {
-          const isOn = h.state === "on";
-          const name = h.attributes.friendly_name ?? h.entity_id;
-          const nNumber = attrString(h.attributes.n_number);
-          const aircraftType = attrString(h.attributes.aircraft_type);
+          const isOn = h.isOn;
+          const name = h.name;
+          const nNumber = h.nNumber;
+          const aircraftType = h.aircraftType;
           const heaterSchedules = schedules.filter(
-            (s) => s.entityId === h.entity_id,
+            (s) => s.entityId === h.entityId,
           );
           return (
             <HeaterRow
-              key={h.entity_id}
-              switchEntity={h}
-              powerSensor={findPowerSensor(h.entity_id, entities)}
-              nodeStatusSensor={findNodeStatusSensor(h.entity_id, entities)}
-              timer={findAutoOffTimer(h.entity_id, entities)}
+              key={h.entityId}
+              heater={h}
               schedules={heaterSchedules}
               forecast={forecast}
               now={now}
               isLoading={
                 (toggle.isPending &&
-                  toggle.variables.entityId === h.entity_id) ||
+                  toggle.variables.entityId === h.entityId) ||
                 (create.isPending &&
-                  create.variables.targetEntityId === h.entity_id)
+                  create.variables.targetEntityId === h.entityId)
               }
               onToggle={() => {
-                toggle.mutate({ entityId: h.entity_id, isOn });
+                toggle.mutate({ entityId: h.entityId, isOn });
               }}
               onSchedule={() => {
                 setDialogHeater({
-                  entityId: h.entity_id,
+                  entityId: h.entityId,
                   name,
                   nNumber,
                   aircraftType,
@@ -117,7 +105,7 @@ export function HeaterList({ connection, entities, username, userId }: Props) {
               onSchedulePreset={(preset) => {
                 if (
                   create.isPending &&
-                  create.variables.targetEntityId === h.entity_id
+                  create.variables.targetEntityId === h.entityId
                 ) {
                   return;
                 }
@@ -139,7 +127,7 @@ export function HeaterList({ connection, entities, username, userId }: Props) {
                     return;
                 }
                 create.mutate({
-                  targetEntityId: h.entity_id,
+                  targetEntityId: h.entityId,
                   targetName: name,
                   startIso: start.toISOString(),
                   username,

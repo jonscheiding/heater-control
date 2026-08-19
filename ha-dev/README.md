@@ -13,13 +13,13 @@ so nothing is hardcoded.
   reference config into `/opt/provision`. Build context is the **repo root**
   (so it can COPY from both `homeassistant/` and `ha-dev/`).
 - **`docker-entrypoint.sh`** — the image ENTRYPOINT. Stages `/config` from
-  `/opt/provision`: renders the env-driven includes, generates the heater packages
-  from the roster (`../homeassistant/gen_packages.py`), stages scheduling +
-  blueprints, self-onboards (`HC_AUTO_SETUP=1`), then launches Home Assistant
+  `/opt/provision`: renders the env-driven includes (including the heater roster),
+  stages packages, self-onboards (`HC_AUTO_SETUP=1`), then launches Home Assistant
   **directly** (bypassing the base image's s6 init, which requires PID 1 —
   unavailable on Fly's managed-init Machines).
-- **`render_config.py`** — writes `/config/auth_oidc.yaml` +
-  `/config/schedulemaster.yaml` from env (`OIDC_*`, `SM_*`) and seeds the HTTP
+- **`render_config.py`** — writes `/config/auth_oidc.yaml`,
+  `/config/schedulemaster.yaml` and `/config/heater_control.yaml` (the demo
+  heaters, from `HEATERS_JSON`) from env, and seeds the HTTP
   settings (`HA_CORS_ORIGINS`, `HA_TRUSTED_PROXIES`, …) into `/config/.storage/http`,
   plus the Fly-only keepalive package when `HC_KEEPALIVE_URL` is set.
 - **`setup.py`** — drives HA's REST API to onboard the owner and create the
@@ -37,7 +37,7 @@ so nothing is hardcoded.
 | `OIDC_FORCE_HTTPS`                              | https redirect URIs (behind TLS proxy)        | `false`                | `true`              |
 | `HA_CORS_ORIGINS`                               | SPA origins (comma list)                      | localhost              | SPA domain          |
 | `HA_USE_X_FORWARDED_FOR` / `HA_TRUSTED_PROXIES` | reverse-proxy trust                           | off                    | on                  |
-| `HEATERS_JSON`                                  | roster the heater packages render from        | `heaters.demo.json`    | `heaters.demo.json` |
+| `HEATERS_JSON`                                  | roster the demo heaters are imported from     | `heaters.demo.json`    | `heaters.demo.json` |
 | `HC_AUTO_SETUP`                                 | self-onboard + create calendar on boot        | `1`                    | `1`                 |
 | `HC_KEEPALIVE_URL`                              | self-ping URL so timers outlive Fly auto_stop | unset                  | public HA URL       |
 
@@ -82,39 +82,42 @@ open http://localhost:8123        # sign in dev/dev, or "ScheduleMaster (dev)"
 ```
 
 Config comes from `../homeassistant/`: `configuration.yaml` is baked (changes need
-`up --build`), while the roster (`heaters.demo.json`), `gen_packages.py`,
-`scheduling.yaml`, and `blueprints/` are bind-mounted over `/opt/provision` — edit
-them + `docker compose restart` to regenerate `/config` without a rebuild. Runtime
-state lives in the gitignored `ha-dev/.dev/`. Full reset:
+`up --build`), while the roster (`heaters.demo.json`), `packages/`, and the
+custom components are bind-mounted over `/opt/provision` — edit them +
+`docker compose restart` to restage `/config` without a rebuild. Runtime state
+lives in the gitignored `ha-dev/.dev/`. Full reset:
 `docker compose down && rm -rf .dev`.
+
+Heaters come from the roster: `render_config.py` turns it into
+`/config/heater_control.yaml`, which the `heater_control` integration reconciles
+into config entries every start — so editing the roster adds, updates, or removes
+heaters on the next `docker compose restart`, and a wiped `.dev` re-creates
+exactly the same set.
 
 Debugging the proxy: `pnpm --filter @heater-control/oidc-proxy exec tsx --inspect --watch src/server.ts` and attach your Node debugger.
 
-### Simulating an unreachable heater
+### Simulating hardware faults
 
-Every simulated heater carries an `input_boolean.simulated_offline_<id>` toggle
-(named outside the `heater_*` namespace on purpose — the SPA reads every
-`input_boolean.heater_*` as a heater, so a helper named `heater_2_…` would show
-up as a phantom heater row).
-Turning it on flips the generated `sensor.<id>_node_status` to `dead` — the same
-value a real Z-Wave node reports once it drops off the mesh (see
-[`../homeassistant/README.md`](../homeassistant/README.md#reachability-sensorid_node_status))
-— and the SPA renders that heater as "Unreachable" with its power button
-disabled. Turn it back off to recover.
+Each virtual heater's device carries two entities for this, alongside its switch,
+power sensor, and node-status sensor:
 
-Flip it in HA (Developer Tools → States, or the entity's more-info dialog), or
-from the shell:
+- **`switch.<name>_simulate_offline`** — turn it on and the heater's node status
+  goes `dead`, exactly like a real Z-Wave node that dropped off the mesh. The
+  heater publishes `reachable: false` and the SPA renders it "Unreachable" with
+  its power button disabled, while the entity itself stays available with its
+  last known on/off — which is precisely how Z-Wave JS behaves.
+- **`number.<name>_simulated_wattage`** — set it to 0 and a heater that is on
+  draws nothing, so the SPA shows "On, unplugged" once the grace period elapses.
 
-```bash
-# `<token>` = a long-lived token from Profile → Security
-curl -X POST http://localhost:8123/api/services/input_boolean/turn_on \
-  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"entity_id": "input_boolean.simulated_offline_heater_2"}'
-```
+Flip either in HA (Developer Tools → States, or the entity's more-info dialog).
+Both are plain entities on the heater's device with no `heater` attribute, so
+unlike the helpers they replace they can't be mistaken for heaters themselves.
 
-Note this is only needed because a _simulated_ heater has no device to unplug —
-and a real Z-Wave switch that you do unplug behaves the same way, since Z-Wave JS
-leaves the switch entity available with its last known state either way.
+To watch **auto-off** fire without waiting two hours, set the heater's
+`number.<name>_auto_off_after` to 1 minute. Real heaters have that control too —
+it's ordinary configuration, not a simulation — and lowering it below a running
+heater's elapsed time switches it off immediately, since the deadline is measured
+from when the heater turned on.
 
 ## Fly demo (scale-to-zero, small persistent volume)
 

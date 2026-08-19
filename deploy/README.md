@@ -1,11 +1,13 @@
 # deploy — HAOS config push
 
 Ships config updates to the **production Home Assistant OS box** and applies
-them. Default scope is the config that iterates: `packages/` (heaters + their
-automations), the `heater_control` blueprint, and repo-tracked
-`custom_components/` (e.g. the schedulemaster integration). A separate `--oidc`
-flag handles the set-once OIDC bundle (patched `auth_oidc` component + rendered
-includes + secret).
+them. Default scope is the config that iterates: `packages/` (the scheduling
+automation) and repo-tracked `custom_components/` (the schedulemaster and
+heater_control integrations). A separate `--oidc` flag handles the set-once OIDC
+bundle (patched `auth_oidc` component + rendered includes + secret).
+
+Heaters are **not** deployed — they're config entries added in the HA UI (see
+"Add a heater").
 
 The box's other set-once pieces stay by-hand and are never touched: onboarding,
 add-ons, and `configuration.yaml` itself (you keep the `!include` lines there).
@@ -14,14 +16,11 @@ config, see the container in [`../ha-dev/`](../ha-dev/) instead.
 
 ## Contents
 
-| File                 | What it does                                                            |
-| -------------------- | ----------------------------------------------------------------------- |
-| `push.sh`            | rsync packages/ + blueprints/ + custom_components/, then reload/restart |
-| `render_includes.py` | render auth_oidc.yaml for `push.sh --oidc`                              |
-| `.env.example`       | copy to `.env` (gitignored) and fill in                                 |
-
-(Heaters come from `homeassistant/heaters.prod.json`, rendered by
-`homeassistant/gen_packages.py` — see "Add a heater".)
+| File                 | What it does                                              |
+| -------------------- | --------------------------------------------------------- |
+| `push.sh`            | rsync packages/ + custom_components/, then reload/restart |
+| `render_includes.py` | render auth_oidc.yaml for `push.sh --oidc`                |
+| `.env.example`       | copy to `.env` (gitignored) and fill in                   |
 
 ## Prerequisites
 
@@ -60,33 +59,19 @@ Done by hand on a fresh box; `deploy/` handles everything after:
 
 ## Add a heater
 
-Edit the roster `homeassistant/heaters.prod.json`, then `deploy/push.sh`
-(regenerates the packages + reloads):
+**No deploy needed.** Heaters are config entries, added on the box in the UI:
+pair the device, then Settings → Devices & Services → **Add integration** →
+**Heater Control**, and point it at the device's switch (plus its power sensor
+and, on Z-Wave, its diagnostic **Node status** sensor). The SPA picks it up over
+WebSocket immediately.
 
-```json
-{ "id": "heater_7", "label": "C172 N123AB", "simulated": true }
-```
+Nothing needs renaming — the integration publishes everything the SPA reads as
+attributes on the heater entity it owns, so entity ids carry no meaning. Details
+and the attribute contract are in
+[`../homeassistant/README.md`](../homeassistant/README.md#adding-a-heater).
 
-`id` must be `heater_<n>`; `label` is the display name. Optional: `duration`
-(`HH:MM:SS`/`3h`/`90m`, default 2h), `simulated_power_initial`. For a **real**
-heater, pair the device in HA as `switch.<id>`, then drop `simulated`
-(`{ "id": "heater_7", "label": "…" }`) — the package wires the timer + auto-off to
-the device's switch and the device supplies the power sensor. The new entities
-appear on reload; the SPA picks them up over WebSocket with no code change.
-
-While renaming the device's entities, give its **power** sensor the id
-`sensor.<id>_power` and — on Z-Wave devices — its diagnostic **Node status**
-sensor the id `sensor.<id>_node_status` (e.g. `sensor.node_2_node_status` →
-`sensor.heater_1_node_status`). The SPA correlates both by id: without the power
-sensor it can't tell "on" from "on but unplugged", and without the node-status
-sensor it shows a stale On/Off with an enabled power button after the node dies,
-because Z-Wave JS leaves the switch entity _available_ with its last known state.
-Details in
-[`../homeassistant/README.md`](../homeassistant/README.md#reachability-sensorid_node_status).
-
-Entity ids are frozen at first creation, so rename before relying on them — and
-note that changing a heater's `label` later never moves an id that was minted
-from the old label.
+`deploy/push.sh` is still what ships the _component_ itself (and any change to
+it forces a core restart).
 
 ## Push updates
 
@@ -100,11 +85,11 @@ deploy/push.sh --no-apply   # sync only, take no reload/restart action
 the tracked dirs (`--delete`, scoped per-dir so removing a heater/component file
 prunes it on the box), and picks the lightest action from what changed:
 
-| Changed                    | Action                                              |
-| -------------------------- | --------------------------------------------------- |
-| `packages/`, `blueprints/` | `homeassistant.reload_all` (hot, no downtime)       |
-| `custom_components/*`      | `ha core restart` (Python needs it; brief downtime) |
-| nothing                    | no-op                                               |
+| Changed               | Action                                              |
+| --------------------- | --------------------------------------------------- |
+| `packages/`           | `homeassistant.reload_all` (hot, no downtime)       |
+| `custom_components/*` | `ha core restart` (Python needs it; brief downtime) |
+| nothing               | no-op                                               |
 
 A config check runs before any restart and aborts it on errors (a
 freshly-pushed component showing as an "integration not found" _warning_ is
@@ -154,9 +139,8 @@ browser reports as a misleading CORS error). The name must be exactly
 ## CI
 
 [`.github/workflows/deploy-haos.yml`](../.github/workflows/deploy-haos.yml) runs
-`push.sh` on merge to `main` when `homeassistant/packages/**`,
-`homeassistant/blueprints/**`, or `homeassistant/custom_components/**` change,
-connecting over Tailscale. Required
+`push.sh` on merge to `main` when `homeassistant/packages/**` or
+`homeassistant/custom_components/**` change, connecting over Tailscale. Required
 secrets: `HAOS_HA_URL`, `HAOS_HA_TOKEN`, `HAOS_SSH_TARGET`, `HAOS_SSH_KEY`,
 `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET` (and optional `HAOS_REMOTE_CONFIG` /
 `HAOS_SSH_PORT` repo vars).

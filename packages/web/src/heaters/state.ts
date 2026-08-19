@@ -1,3 +1,5 @@
+import type { Heater } from "./heater.js";
+
 export const STATUS_LABELS: Record<HeaterState, string> = {
   off: "Off",
   on: "On",
@@ -8,47 +10,32 @@ export const STATUS_LABELS: Record<HeaterState, string> = {
 
 export type HeaterState = "off" | "on" | "waiting" | "no-power" | "unreachable";
 
-// Z-Wave node statuses that mean the mesh can still deliver a command. A
-// sleeping node ("asleep") wakes for queued commands, so it counts as reachable;
-// "dead" does not, and neither does an unknown/unavailable status sensor (the
-// Z-Wave driver itself is down, so nothing gets through).
-const LIVE_NODE_STATUSES = new Set(["alive", "awake", "asleep"]);
-
 export interface HeaterStateInput {
-  switchState: string;
-  switchLastChangedIso: string;
-  powerWatts: number | null;
+  heater: Heater;
   now: number;
-  /** State of the correlated node-status sensor; null when there isn't one. */
-  nodeStatus?: string | null;
   graceMs?: number;
   powerThresholdW?: number;
 }
 
 export function computeHeaterState({
-  switchState,
-  switchLastChangedIso,
-  powerWatts,
+  heater,
   now,
-  nodeStatus = null,
   graceMs = 5000,
   powerThresholdW = 5,
 }: HeaterStateInput): HeaterState {
   // HA reports "unavailable" when it can't reach the device and "unknown"
   // before it has ever heard from it; neither means "off".
-  if (switchState === "unavailable" || switchState === "unknown") {
+  if (heater.rawState === "unavailable" || heater.rawState === "unknown") {
     return "unreachable";
   }
-  // Z-Wave JS leaves the switch entity available and reporting its last known
-  // state when the node goes dead, so the node-status sensor is the only signal
-  // that the device dropped off the mesh.
-  if (nodeStatus !== null && !LIVE_NODE_STATUSES.has(nodeStatus)) {
-    return "unreachable";
-  }
-  if (switchState !== "on") return "off";
-  if (powerWatts === null) return "on";
-  if (powerWatts >= powerThresholdW) return "on";
-  const sinceOnMs = now - new Date(switchLastChangedIso).getTime();
+  // Whether the device can still be commanded is decided in Home Assistant —
+  // a Z-Wave switch keeps reporting its last known state after its node dies,
+  // so the integration reads the node's status and publishes the verdict.
+  if (!heater.reachable) return "unreachable";
+  if (!heater.isOn) return "off";
+  if (heater.powerWatts === null) return "on";
+  if (heater.powerWatts >= powerThresholdW) return "on";
+  const sinceOnMs = now - new Date(heater.lastChangedIso).getTime();
   if (sinceOnMs < graceMs) return "waiting";
   return "no-power";
 }

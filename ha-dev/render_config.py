@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Render env-driven Home Assistant config at container start.
 
-Writes ``<config>/auth_oidc.yaml`` and ``<config>/schedulemaster.yaml`` from
-environment variables so one image serves both local dev (host proxy over http)
-and the Fly demo (proxy over https) without hardcoding the OIDC issuer or the
-ScheduleMaster account. ``configuration.yaml`` pulls those in via ``!include``.
+Writes ``<config>/auth_oidc.yaml``, ``<config>/schedulemaster.yaml`` and
+``<config>/heater_control.yaml`` from environment variables so one image serves
+both local dev (host proxy over http) and the Fly demo (proxy over https)
+without hardcoding the OIDC issuer, the ScheduleMaster account, or the demo
+heaters. ``configuration.yaml`` pulls those in via ``!include``.
 The HTTP settings (CORS + reverse-proxy trust) are no longer YAML at all — they
 are seeded straight into ``<config>/.storage/http`` (see ``render_http``). Also
 renders the Fly-only keepalive package into ``<config>/packages/`` when
@@ -118,29 +119,71 @@ def render_schedulemaster():
     return conf
 
 
+def render_heater_control():
+    """heater_control block — the demo/dev heater roster.
+
+    Config entries live in .storage, which a dev reset wipes and a fresh Fly
+    volume never had, so these environments can't be configured by clicking
+    through the config flow the way the prod box is. Declaring them here instead
+    makes the container self-provisioning: the component reconciles this list
+    into config entries on every start (create / update / remove), keyed by each
+    heater's stable `key`.
+
+    The roster is the demo JSON that used to feed gen_packages.py. Everything in
+    it is virtual — dev has no hardware to wrap."""
+    path = os.environ.get("HEATERS_JSON", "/opt/provision/heaters.demo.json")
+    try:
+        with open(path) as f:
+            roster = json.load(f)
+    except (OSError, ValueError) as err:
+        print(f"[render-config] no heater roster at {path} ({err}); no heaters")
+        roster = []
+    heaters = []
+    for entry in roster:
+        heater = {
+            "key": entry["id"],
+            "name": entry.get("label") or entry["id"],
+            "virtual": True,
+        }
+        for src, dest in (
+            ("n_number", "n_number"),
+            ("aircraft_type", "aircraft_type"),
+            ("duration", "auto_off"),
+            ("simulated_power_initial", "virtual_watts"),
+        ):
+            if entry.get(src) is not None:
+                heater[dest] = entry[src]
+        heaters.append(heater)
+    # Always write the key, even empty, so the `!include` resolves.
+    return {"heaters": heaters}
+
+
 def render_keepalive(url):
     """Fly-only keepalive package. Fly's auto_stop suspends the machine after a
-    few idle minutes (not configurable), so an auto-off timer that outlives the
-    last visitor never fires. While any timer is active, ping our own PUBLIC URL
-    every 2 minutes — the request re-enters via fly-proxy, which is what resets
-    the idle clock (localhost traffic doesn't count). Timers only start from SPA
-    interaction, so the machine is always awake when pinging needs to begin; once
-    the last timer goes idle the pings stop and the machine suspends as usual."""
+    few idle minutes (not configurable), so an auto-off that outlives the last
+    visitor never fires. While any heater has an auto-off armed, ping our own
+    PUBLIC URL every 2 minutes — the request re-enters via fly-proxy, which is
+    what resets the idle clock (localhost traffic doesn't count). Auto-offs only
+    arm when a heater turns on, so the machine is always awake when pinging needs
+    to begin; once the last one clears the pings stop and the machine suspends as
+    usual."""
     return {
         "rest_command": {
             "fly_keepalive": {"url": url},
         },
         "automation": [
             {
-                "alias": "Fly demo: keep machine awake while auto-off timers run",
+                "alias": "Fly demo: keep machine awake while an auto-off is armed",
                 "mode": "single",
                 "trigger": [{"platform": "time_pattern", "minutes": "/2"}],
                 "condition": [
                     {
                         "condition": "template",
                         "value_template": (
-                            "{{ states.timer"
-                            " | selectattr('state', 'eq', 'active')"
+                            "{{ states.switch"
+                            " | selectattr('attributes.heater', 'defined')"
+                            " | selectattr('attributes.auto_off_at', 'defined')"
+                            " | rejectattr('attributes.auto_off_at', 'none')"
                             " | list | count > 0 }}"
                         ),
                     }
@@ -250,6 +293,7 @@ def write_http_storage(conf):
 def main():
     _write("auth_oidc.yaml", render_auth_oidc())
     _write("schedulemaster.yaml", render_schedulemaster())
+    _write("heater_control.yaml", render_heater_control())
     write_http_storage(render_http())
 
     # http.yaml predates the move to .storage/http; drop a copy left on a

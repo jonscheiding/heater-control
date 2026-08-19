@@ -64,16 +64,15 @@ services:
       retries: 30
       start_period: 20s
     volumes:
-      # Runtime state (DB, logs, .storage, provisioned components, generated
-      # packages, rendered includes) — gitignored. The entrypoint stages config
-      # into /config from /opt/provision; bind-mount the sources over that so a
-      # `docker compose restart` picks up roster/blueprint edits without a rebuild.
+      # Runtime state (DB, logs, .storage, provisioned components, rendered
+      # includes) — gitignored. The entrypoint stages config into /config from
+      # /opt/provision; bind-mount the sources over that so a
+      # `docker compose restart` picks up roster/package edits without a rebuild.
       - ./.dev/config:/config
       - ../homeassistant/heaters.demo.json:/opt/provision/heaters.demo.json:ro
-      - ../homeassistant/gen_packages.py:/opt/provision/gen_packages.py:ro
-      - ../homeassistant/packages/scheduling.yaml:/opt/provision/packages/scheduling.yaml:ro
-      - ../homeassistant/blueprints:/opt/provision/blueprints:ro
-      # Custom component sources: mount the schedulemaster subdir only (mounting
-      # the whole custom_components dir would hide the image-baked auth_oidc).
-      # `docker compose restart` restages it. Add a line per new component.
+      - ../homeassistant/packages:/opt/provision/packages:ro
+      # Custom component sources: mount each subdir individually (mounting the
+      # whole custom_components dir would hide the image-baked auth_oidc).
+      # `docker compose restart` restages them. Add a line per new component.
       - ../homeassistant/custom_components/schedulemaster:/opt/provision/custom_components/schedulemaster:ro
+      - ../homeassistant/custom_components/heater_control:/opt/provision/custom_components/heater_control:ro

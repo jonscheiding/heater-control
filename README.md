@@ -25,8 +25,9 @@ pilot's browser ──▶ SPA (Netlify) ──▶ Home Assistant ──▶ heate
 
 - **SPA** (`packages/web/`) — static React app that talks to Home Assistant
   over its WebSocket API and signs users in via HA's OAuth2 flow.
-- **Home Assistant** — self-hosted; the reference configuration (one package
-  per heater, auto-off timers, blueprints) lives in [`homeassistant/`](homeassistant/).
+- **Home Assistant** — self-hosted; the reference configuration and the
+  `heater_control` integration (heaters, auto-off) live in
+  [`homeassistant/`](homeassistant/).
 - **OIDC proxy** (`packages/oidc-proxy/`) — wraps the ScheduleMaster login
   scraper (`packages/sm-client/`) in a standards-compliant OIDC provider, which
   HA consumes via the [`auth_oidc`](https://github.com/christiaangoossens/hass-oidc-auth)

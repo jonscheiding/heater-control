@@ -33,13 +33,13 @@ RUN set -eux; \
 # Reference config (baked; staged into /config at start).
 COPY homeassistant/configuration.yaml /opt/provision/configuration.yaml
 COPY homeassistant/packages /opt/provision/packages
-COPY homeassistant/blueprints /opt/provision/blueprints
-# Repo-tracked custom components (schedulemaster, ...) merge alongside the
-# auth_oidc dir materialized above; the entrypoint stages them into /config.
+# Repo-tracked custom components (schedulemaster, heater_control, ...) merge
+# alongside the auth_oidc dir materialized above; the entrypoint stages them
+# into /config.
 COPY homeassistant/custom_components /opt/provision/custom_components
-# Heater roster + generator (entrypoint renders packages from the demo roster).
+# Demo heater roster; render_config.py turns it into the heater_control include
+# that the integration imports as config entries.
 COPY homeassistant/heaters.demo.json /opt/provision/heaters.demo.json
-COPY homeassistant/gen_packages.py /opt/provision/gen_packages.py
 
 # Tooling.
 COPY ha-dev/render_config.py /opt/provision/render_config.py

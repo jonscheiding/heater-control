@@ -1,7 +1,7 @@
 # Home Assistant configuration (reference)
 
 Declarative HA config, tracked alongside the SPA — the reference `/config` plus
-the heater roster + generator that renders the per-heater packages. Source of
+the custom integrations that back it. Source of
 truth for both the containerized dev/demo image and the HAOS box. The tooling
 that builds and runs a container of this config lives in
 [`../ha-dev/`](../ha-dev/); see its README to run the dev stack or deploy the Fly
@@ -11,8 +11,9 @@ demo.
 
 - `configuration.yaml` — top-level config. Enables only what the app needs
   (deliberately no `default_config`, for a faster boot), the packages dir, and the
-  **environment-rendered includes** `auth_oidc: !include auth_oidc.yaml` and
-  `schedulemaster: !include schedulemaster.yaml`. Those files are **not tracked** —
+  **environment-rendered includes** `auth_oidc: !include auth_oidc.yaml`,
+  `schedulemaster: !include schedulemaster.yaml`, and — in the container only —
+  `heater_control: !include heater_control.yaml`. Those files are **not tracked** —
   they're generated at container start from env vars by
   `../ha-dev/render_config.py` (so the OIDC issuer and the ScheduleMaster account
   differ per environment without editing this file). On a prod HAOS box
@@ -31,18 +32,17 @@ demo.
   payload — `{entity_id, source, username, user_id, user_email, n_number,
 aircraft_type, comment}`. The turn-on automation reads `entity_id` from it (and
   still tolerates a legacy plain-`entity_id` description); the SPA reads the rest.
-- `packages/` — `scheduling.yaml` (calendar-triggered turn-on) plus one
-  **generated** `heater_<id>.yaml` per heater. Enabled via
+- `packages/` — `scheduling.yaml` (calendar-triggered turn-on), plus the Fly-only
+  keepalive rendered at container start. Enabled via
   `homeassistant: packages: !include_dir_named packages` in `configuration.yaml`.
-- `heaters.demo.json` / `heaters.prod.json` — the heater roster (one per
-  environment), the **source of truth**. `gen_packages.py` renders each entry into
-  a `packages/heater_<id>.yaml` (simulated `input_boolean` + fake power, or a real
-  `switch` + auto-off). The generated files are gitignored; `push.sh` and the
-  container entrypoint regenerate them.
-- `blueprints/automation/heater_control/` — reusable automation templates the
-  per-heater packages reference. `switch_with_auto_off` encapsulates the
-  timer-start / timer-cancel / timer-finish wiring so each per-heater file stays
-  trivially small.
+  Heaters are **not** here — they're config entries (see "Adding a heater").
+- `custom_components/heater_control/` — the heater integration: one config entry
+  per heater, a switch entity per heater that wraps the real device and publishes
+  the app's contract, and the auto-off machinery. See "Adding a heater" below.
+- `heaters.demo.json` — the demo/dev heater roster. Only used by the container:
+  `ha-dev/render_config.py` turns it into the `heater_control.yaml` include that
+  the integration imports as config entries, because dev wipes `.storage` on
+  reset and can't be configured by clicking. The prod box has no roster.
 - `patches/` — local overrides applied on top of the `auth_oidc` integration
   (see `patches/README.md`). Both the container (at build time) and
   `deploy/push.sh --oidc` (which ships the pinned + pre-patched component to
@@ -51,68 +51,91 @@ aircraft_type, comment}`. The turn-on automation reads `entity_id` from it (and
   "ScheduleMaster integration" below). Shipped to HAOS by `deploy/push.sh` (part
   of the repo `custom_components/` sync) and baked into the dev image.
 
-## Adding a new heater
+## Adding a heater
 
-Add an entry to the roster JSON — `heaters.prod.json` and/or `heaters.demo.json`:
+Heaters are **config entries**, not YAML. On the box: Settings → Devices &
+Services → **Add integration** → **Heater Control**, then choose
 
-```json
-{ "id": "heater_7", "label": "C172 N123AB", "simulated": true }
-```
+- **Real heater** — pick the switch entity that controls it. Optionally pick its
+  power sensor and, on Z-Wave devices, its diagnostic **Node status** sensor.
+  Set the tail number, aircraft type, and how long it may stay on.
+- **Virtual heater** — a simulated heater with no hardware behind it, for dev and
+  the demo. It brings its own power sensor, node-status sensor, simulate-offline
+  toggle, and adjustable wattage.
 
-`gen_packages.py` renders it to `packages/heater_7.yaml` at deploy
-(`deploy/push.sh`) / container start. `id` must be `heater_<n>` — the SPA keys off
-`switch.heater_*` / `input_boolean.heater_*`; `label` is the display name.
-Optional: `duration` (`HH:MM:SS`/`3h`/`90m`, default 2h), `simulated_power_initial`,
-`n_number` (aircraft tail number, e.g. `N123AB`), and `aircraft_type` (e.g. `C172`).
-`n_number` / `aircraft_type` are emitted as entity attributes via
-`homeassistant: customize:`; the ScheduleMaster integration maps a booking's tail
-number to the heater with the matching `n_number`, so set it to exactly the value
-ScheduleMaster reports in `N_NO`.
-For a **real** heater, drop `simulated` — the device provides `switch.<id>` and its
-power sensor, and the package adds only the timer + auto-off. The new entities
-appear automatically; the SPA picks them up over WebSocket with no code change.
+Nothing needs deploying, and nothing needs renaming: the integration owns a
+switch entity per heater and publishes everything about it as attributes, so no
+entity id anywhere carries meaning. Rename entities freely.
 
-## Reachability (`sensor.<id>_node_status`)
+Edit a heater later via its **Configure** button; delete the config entry to
+remove it.
+
+## The attribute contract
+
+The heater entity is the whole interface between Home Assistant and the app.
+Everything the app knows comes from these attributes:
+
+| attribute       | meaning                                                       |
+| --------------- | ------------------------------------------------------------- |
+| `heater: true`  | the discovery marker — the app's only selector                |
+| `n_number`      | tail number, stored without the leading `N`                   |
+| `aircraft_type` | e.g. `C182`                                                   |
+| `power_w`       | current draw, or `null` when no power sensor is configured    |
+| `reachable`     | `false` when the device can't be commanded                    |
+| `auto_off_at`   | when the heater switches itself off, or `null` when not armed |
+
+`n_number` / `aircraft_type` are also what the ScheduleMaster integration maps a
+booking against — it scans every entity for an `n_number` attribute, so heaters
+bind to bookings without either component knowing about the other.
+
+## Reachability
 
 Z-Wave JS does **not** mark a switch entity `unavailable` when its node stops
 answering — entity availability there tracks the driver connection and the node
-interview, not the node's current status, so `switch.heater_1` keeps serving its
-last known `on`/`off` and the SPA would happily offer to toggle a device that
-can't hear it. The reachability signal lives in the node's diagnostic **Node
-status** sensor (`alive` / `awake` / `asleep` / `dead` / `unknown`).
+interview, not the node's current status, so the switch keeps serving its last
+known `on`/`off` and the app would happily offer to toggle a device that can't
+hear it. The reachability signal lives in the node's diagnostic **Node status**
+sensor (`alive` / `awake` / `asleep` / `dead` / `unknown`), which is why the
+config flow asks for it.
 
-So the SPA correlates one by convention: **rename that sensor to
-`sensor.<heater id>_node_status`** (Settings → Devices → the switch's device →
-Node status → gear → Entity ID; e.g. `sensor.node_2_node_status` →
-`sensor.heater_1_node_status`). Anything other than alive/awake/asleep renders
-the heater as "Unreachable" with its power button disabled. The sensor is
-optional — heaters without one fall back to the switch entity's own
-`unavailable`/`unknown` state, which is what non-Z-Wave integrations do.
+The component reads that sensor and publishes the verdict as `reachable`;
+anything other than alive/awake/asleep renders the heater as "Unreachable" with
+its power button disabled. `asleep` counts as reachable — a sleeping node wakes
+for queued commands. The sensor is optional: heaters without one fall back to the
+switch entity's own `unavailable`/`unknown` state, which is what non-Z-Wave
+integrations report honestly.
 
-Simulated heaters generate their own `sensor.<id>_node_status` from an
-`input_boolean.simulated_offline_<id>` toggle, so dev and the Fly demo can
-exercise the same path (see [`../ha-dev/README.md`](../ha-dev/README.md)). That
-helper is deliberately named outside the `heater_*` namespace — the SPA reads
-every `input_boolean.heater_*` as a heater, so `heater_2_simulated_offline`
-would appear as a phantom heater row.
+Note the heater entity stays **available** even when unreachable. Home Assistant
+drops custom attributes from an unavailable entity, so going unavailable would
+take `n_number` and `aircraft_type` with it and break the app's scheduling
+dialog.
 
-### Entity ids are frozen at creation
+## Auto-off
 
-The SPA correlates a heater's companions **by entity id** —
-`sensor.<id>_power`, `sensor.<id>_node_status`, `timer.<id>_autooff` — so the
-generated template sensors are named `heater_<n>_power` /
-`heater_<n>_node_status` and get their display names back through
-`customize: friendly_name`. That indirection is deliberate: a template entity's
-entity id is slugified from its `name`, and the entity registry pins it at first
-creation, keyed by `unique_id`. Naming the sensors after the label instead
-produced ids like `sensor.c182_n9525d_power` that the SPA never found — and
-editing the label afterwards did **not** move them (nor the registry's
-`original_name`, so those entities also kept showing a stale friendly name).
+When a heater turns on, the component computes `turned_on_at + duration` and
+schedules a one-shot callback at exactly that instant — it isn't polled. It keys
+off the _underlying_ switch rather than off our own service calls, so a heater
+turned on by the calendar automation or by hand at the plug is treated exactly
+like one turned on from the app.
 
-The practical consequence: an entity keeps whatever id it was born with. Fixing
-one means renaming it in the UI (Settings → Devices & Services → Entities → the
-entity → gear → Entity ID) or deleting its registry entry so it gets recreated.
-For the dev container, `docker compose down && rm -rf .dev` does it wholesale.
+The deadline is the source of truth and the callback is only an optimization over
+consulting it. It's persisted to `.storage/heater_control.auto_off` (keyed by
+config entry, so it survives an entry reload as well as a restart) and published
+as the `auto_off_at` attribute. Two things re-derive from it:
+
+- **Startup** — deadline in the past ⇒ switch off (the case the old blueprint
+  caught with its startup sweep), in the future ⇒ re-arm, absent ⇒ arm fresh.
+- **A one-minute tick** — a backstop, because scheduled callbacks run on the
+  event loop's clock, which a suspended Fly machine freezes; on resume the
+  one-shot would fire late by the whole suspend. Also covers clock jumps and DST.
+
+The duration is editable from the heater's device page as **Auto-off after**
+(`number.<name>_auto_off_after`), in minutes; 0 disables auto-off. Changing it
+re-measures from when the heater actually turned on, so shortening it can retire a
+running heater immediately — which is also the quickest way to watch auto-off
+fire: set it to 1 minute. It writes straight back to the config entry, so it and
+the options flow are two views of one value, and the entry is adopted in place
+rather than reloaded.
 
 ## ScheduleMaster integration
 
@@ -164,9 +187,11 @@ weekly (`schedulemaster-regression` workflow).
 ## What does NOT live here
 
 - HA runtime state: `home-assistant_v2.db`, logs, `.storage/`, registry files.
-- The generated `auth_oidc.yaml` / `schedulemaster.yaml` and
-  `packages/heater_*.yaml` (rendered from env / the roster at container start; on
-  a prod HAOS box the includes are created by hand / `deploy/push.sh`).
+- The generated `auth_oidc.yaml` / `schedulemaster.yaml` / `heater_control.yaml`
+  (rendered from env at container start; on a prod HAOS box the first is created
+  by `deploy/push.sh`, the second by hand, and the third not at all — heaters
+  there are config entries).
+- Heaters themselves. They're config entries in `.storage`, added in the UI.
 - The HTTP/CORS settings — HA owns them in `.storage/http` (seeded from env in
   the container, set in the UI on HAOS).
 - UI-created helpers/automations (persist in `.storage/`; recreate them here).
@@ -178,8 +203,8 @@ weekly (`schedulemaster-regression` workflow).
 - **HAOS (real deployment):** the box is **provisioned by hand** (onboarding,
   add-ons, HTTP/CORS settings in the UI, and `configuration.yaml` — where you keep
   the `auth_oidc: !include auth_oidc.yaml` line). [`../deploy/`](../deploy/) then
-  ships the iterating config via `deploy/push.sh` — `packages/`, the
-  `heater_control` blueprint, and repo-tracked `custom_components/` (reload for
-  YAML, restart for components). `deploy/push.sh --oidc` handles the set-once OIDC
+  ships the iterating config via `deploy/push.sh` — `packages/` and repo-tracked
+  `custom_components/` (reload for YAML, restart for components). Heaters
+  themselves are config entries and need no deploy at all. `deploy/push.sh --oidc` handles the set-once OIDC
   bundle: the pinned + patched `auth_oidc` component, the rendered `auth_oidc.yaml`
   include, and the `sm_oidc_client_secret` in `secrets.yaml`.

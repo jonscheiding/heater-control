@@ -4,7 +4,7 @@
 #
 #   deploy/push.sh [--dry-run] [--no-apply] [--oidc] [--calendar]
 #
-#   (default)   packages/ + heater_control blueprint + repo custom_components/
+#   (default)   packages/ + repo custom_components/
 #   --oidc      patched auth_oidc component + rendered auth_oidc.yaml + secrets.yaml
 #   --calendar  ensure the "Heater schedules" local_calendar (calendar.heater_schedules)
 #
@@ -97,12 +97,6 @@ esac
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
-# --- stage packages: scheduling (static) + heaters generated from the roster ---
-PKG_STAGE="$STAGE/packages"
-mkdir -p "$PKG_STAGE"
-cp "$HA_SRC/packages/scheduling.yaml" "$PKG_STAGE/"
-python3 "$HA_SRC/gen_packages.py" --input "$HA_SRC/heaters.prod.json" --out "$PKG_STAGE"
-
 # --- stage the OIDC bundle (component + rendered includes) ---
 if [ "$OIDC" -eq 1 ]; then
   [ -n "${OIDC_CLIENT_SECRET:-}" ] || die "--oidc needs OIDC_CLIENT_SECRET in deploy/.env"
@@ -111,10 +105,10 @@ if [ "$OIDC" -eq 1 ]; then
   HA_CONFIG_DIR="$STAGE" python3 "$DEPLOY_DIR/render_includes.py"
 fi
 
-# rsync won't create missing PARENT dirs. HA scaffolds blueprints/automation but
-# not packages/ or custom_components/, so pre-create them (idempotent; not on dry-run).
+# rsync won't create missing PARENT dirs, and HA scaffolds neither packages/ nor
+# custom_components/, so pre-create them (idempotent; not on dry-run).
 if [ "$DRYRUN" -eq 0 ]; then
-  ssh_run "mkdir -p '$REMOTE_CONFIG/packages' '$REMOTE_CONFIG/blueprints/automation' '$REMOTE_CONFIG/custom_components'" ||
+  ssh_run "mkdir -p '$REMOTE_CONFIG/packages' '$REMOTE_CONFIG/custom_components'" ||
     die "couldn't create remote directories under $REMOTE_CONFIG"
 fi
 
@@ -206,10 +200,7 @@ sys.exit(0 if any(e.get("domain") == "local_calendar" and e.get("title") == os.e
 needs_reload=0
 needs_restart=0
 
-if sync "packages/" "$PKG_STAGE/" "packages/"; then needs_reload=1; fi
-if sync "blueprints/heater_control" \
-  "$HA_SRC/blueprints/automation/heater_control/" \
-  "blueprints/automation/heater_control/"; then needs_reload=1; fi
+if sync "packages/" "$HA_SRC/packages/" "packages/"; then needs_reload=1; fi
 
 # Repo-tracked custom_components, one dir at a time (--delete stays scoped inside
 # a component we own). No-op until homeassistant/custom_components/ exists.

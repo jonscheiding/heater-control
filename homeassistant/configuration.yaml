@@ -31,15 +31,12 @@ script:
 history:
 logbook:
 
-# Helpers used by the per-heater packages.
-input_boolean:
-input_number:
-input_datetime:
-timer:
 template:
 person:
 
-# Per-heater packages: each bundles its input_boolean/timer/auto-off automation.
+# Packages: the calendar-triggered turn-on automation, plus the Fly keepalive.
+# Heaters themselves are config entries owned by the heater_control integration,
+# not YAML.
 # us_customary so weather temperatures come back in °F over the websocket API
 # (the unit system is what governs the unit; there's no per-request override).
 homeassistant:
@@ -56,8 +53,15 @@ auth_oidc: !include auth_oidc.yaml
 # ScheduleMaster username/password.
 schedulemaster: !include schedulemaster.yaml
 
+# Heaters. On the prod box these are config entries added in the UI and this
+# include is absent; dev and the Fly demo can't click through a config flow (and
+# wipe .storage on reset), so the container renders a declarative roster that the
+# integration reconciles into config entries at every start.
+heater_control: !include heater_control.yaml
+
 logger:
   default: info
   logs:
     custom_components.auth_oidc: debug
     custom_components.schedulemaster: info
+    custom_components.heater_control: info

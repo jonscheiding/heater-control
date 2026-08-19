@@ -1,7 +1,7 @@
 name: Deploy to HAOS
 
-# Push the iterating app config (packages/, blueprints/, repo-tracked
-# custom_components/) to the hand-provisioned prod HAOS box on merge to main, then
+# Push the iterating app config (packages/, repo-tracked custom_components/) to
+# the hand-provisioned prod HAOS box on merge to main, then
 # apply it — reload_all for YAML, a core restart if a custom_component changed.
 # Reaches the box over Tailscale (no inbound ports); deploy/push.sh rsyncs over
 # the SSH add-on. The box's set-once pieces (onboarding, add-ons,
@@ -18,13 +18,9 @@ on:
   push:
     branches: [main]
     paths:
-      # The heater packages are generated at deploy time and gitignored, so a
-      # roster or generator edit is what actually changes them — watch those
-      # instead (packages/ stays listed for scheduling.yaml, which is tracked).
-      - "homeassistant/heaters.prod.json"
-      - "homeassistant/gen_packages.py"
+      # Heaters are config entries owned by the heater_control component now, so
+      # adding one needs no deploy at all — these are the files push.sh ships.
       - "homeassistant/packages/**"
-      - "homeassistant/blueprints/**"
       - "homeassistant/custom_components/**"
       - "deploy/push.sh"
       - ".github/workflows/deploy-haos.yml"

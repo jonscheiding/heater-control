@@ -42,15 +42,17 @@ cp "$SRC/configuration.yaml" "$CONFIG/configuration.yaml"
 # YAML into the UI, so they have to be in place before HA starts.
 python3 "$SRC/render_config.py"
 
-# Packages (scheduling + heaters generated from the roster) and blueprints,
-# staged from the image (the source of truth). Dev bind-mounts the sources over
-# /opt/provision, so `docker compose restart` picks up roster/blueprint edits.
-echo "[entrypoint] staging packages + blueprints"
-mkdir -p "$CONFIG/packages" "$CONFIG/blueprints/automation"
-cp -r "$SRC/packages/." "$CONFIG/packages/"   # static packages (scheduling, ...)
-rm -f "$CONFIG"/packages/heater_*.yaml         # strip baked/stale heaters, then regen
-python3 "$SRC/gen_packages.py" --input "${HEATERS_JSON:-$SRC/heaters.demo.json}" --out "$CONFIG/packages"
-cp -r "$SRC/blueprints/." "$CONFIG/blueprints/"
+# Packages, staged from the image (the source of truth). Dev bind-mounts the
+# sources over /opt/provision, so `docker compose restart` picks up edits.
+# Heaters are no longer packages — they're config entries the heater_control
+# integration imports from the roster rendered above (see render_config.py).
+echo "[entrypoint] staging packages"
+mkdir -p "$CONFIG/packages"
+cp -r "$SRC/packages/." "$CONFIG/packages/"
+# Legacy prune: we only ever copy into /config/packages, so generated heater
+# packages left on a persisted dev bind mount or Fly volume would otherwise
+# resurrect the old entities forever. Drop after a release or two.
+rm -f "$CONFIG"/packages/heater_*.yaml
 
 # Optional self-onboarding (dev + Fly demo). Backgrounded: waits for HA to come
 # up, then onboards the owner + ensures the local calendar. Skipped on the real
