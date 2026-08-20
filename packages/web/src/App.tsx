@@ -4,6 +4,7 @@ import { ToastContainer } from "react-toastify";
 import styles from "./App.module.css";
 import { Banner } from "./components/Banner.js";
 import { HeaterList } from "./components/HeaterList.js";
+import { InstallPrompt } from "./components/InstallPrompt.js";
 import { logout } from "./ha/connection.js";
 import { useConnection } from "./ha/hooks.js";
 
@@ -97,6 +98,7 @@ export default function App() {
           />
         )}
       </main>
+      <InstallPrompt />
       {import.meta.env.VITE_REPO_URL != null && (
         <div className={styles.codeLink}>
           <a

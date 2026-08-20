@@ -1,5 +1,7 @@
 .header {
-  padding: 1rem;
+  /* The extra top padding is zero in a browser tab; it only kicks in when the
+     app is installed and drawing under the status bar / notch. */
+  padding: calc(1rem + env(safe-area-inset-top)) 1rem 1rem;
   color: var(--color-on-dark);
   background: var(--color-dark);
   box-shadow: var(--shadow);

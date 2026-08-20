@@ -50,6 +50,12 @@ export default defineConfig([
     },
   },
   {
+    files: ["packages/web/public/sw.js"],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
+  {
     files: ["web/**/*.{ts,tsx,mts,cts}"],
     languageOptions: {
       globals: globals.browser,

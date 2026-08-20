@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import App from "./App.js";
+import { registerServiceWorker } from "./pwa/serviceWorker.js";
 import "./styles.css";
 
 // Browser error reporting. A no-op when VITE_SENTRY_DSN is unset (dev builds).
@@ -20,6 +21,8 @@ if (sentryDsn) {
     dataCollection: {},
   });
 }
+
+registerServiceWorker();
 
 const queryClient = new QueryClient({
   defaultOptions: {

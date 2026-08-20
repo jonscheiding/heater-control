@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  Vector master for the installed-app icons. Redraws public/favicon.png (which
+  only exists at 48px) so the home screen / dock icons can be rendered crisply
+  at any size. Run icons/generate.sh after editing.
+-->
+
+<svg
+   viewBox="0 0 48 48"
+   width="512"
+   height="512"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="app-icon.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs8" />
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.2851562"
+     inkscape:cx="285.56839"
+     inkscape:cy="225.26444"
+     inkscape:window-width="1600"
+     inkscape:window-height="1022"
+     inkscape:window-x="320"
+     inkscape:window-y="32"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="g8"
+     showguides="true">
+    <sodipodi:guide
+       position="18.462222,39.394035"
+       orientation="1,0"
+       id="guide11"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="25.500001,39.394035"
+       orientation="1,0"
+       id="guide12"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="32.537779,39.394035"
+       orientation="1,0"
+       id="guide13"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="32.537779,39.394035"
+       orientation="0,-1"
+       id="guide14"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <rect
+     width="48"
+     height="48"
+     rx="6"
+     fill="#1e293b"
+     id="rect1" />
+  <g
+     fill="#ffffff"
+     id="g4">
+    <rect
+       x="10"
+       y="15.5"
+       width="9"
+       height="28"
+       rx="4.5"
+       id="rect2" />
+    <rect
+       x="21"
+       y="15.5"
+       width="9"
+       height="28"
+       rx="4.5"
+       id="rect3" />
+    <rect
+       x="32"
+       y="15.5"
+       width="9"
+       height="28"
+       rx="4.5"
+       id="rect4" />
+  </g>
+  <g
+     stroke="#ffffff"
+     stroke-width="3"
+     stroke-linecap="round"
+     fill="none"
+     id="g5">
+    <path
+       d="M7.5 36h7"
+       id="path5" />
+    <g
+       id="g9">
+      <path
+         d="M5.5 23h9"
+         id="path4" />
+      <path
+         d="M 5.5,21.5625 V 23"
+         id="path9"
+         sodipodi:nodetypes="cc" />
+    </g>
+  </g>
+  <g
+     stroke="#ffffff"
+     stroke-width="3"
+     stroke-linecap="round"
+     fill="none"
+     id="g8"
+     transform="matrix(1.0053969,0,0,0.9387668,-0.13762018,-0.12456645)">
+    <path
+       d="m 17.992103,4.9000005 c 0.01017,0.056695 1.808445,2.4592201 0.580454,4.4777065 C 17.348206,11.390211 19.007897,13.7 19.007897,13.7"
+       id="path6"
+       sodipodi:nodetypes="csc"
+       style="stroke-width:3.40526;stroke-dasharray:none" />
+    <path
+       d="m 24.992103,4.9000005 c 0.01017,0.056695 1.808445,2.4592201 0.580454,4.4777065 C 24.348206,11.390211 26.007897,13.7 26.007897,13.7"
+       id="path13"
+       sodipodi:nodetypes="csc"
+       style="stroke-width:3.40526;stroke-dasharray:none" />
+    <path
+       d="m 31.992103,4.9000005 c 0.01017,0.056695 1.808445,2.4592201 0.580454,4.4777065 C 31.348206,11.390211 33.007897,13.7 33.007897,13.7"
+       id="path14"
+       sodipodi:nodetypes="csc"
+       style="stroke-width:3.40526;stroke-dasharray:none" />
+  </g>
+</svg>

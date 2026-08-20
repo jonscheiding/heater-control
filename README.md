@@ -24,7 +24,8 @@ pilot's browser ──▶ SPA (Netlify) ──▶ Home Assistant ──▶ heate
 ```
 
 - **SPA** (`packages/web/`) — static React app that talks to Home Assistant
-  over its WebSocket API and signs users in via HA's OAuth2 flow.
+  over its WebSocket API and signs users in via HA's OAuth2 flow. It installs
+  as an app too: home screen on iOS and Android, Dock on macOS.
 - **Home Assistant** — self-hosted; the reference configuration and the
   `heater_control` integration (heaters, auto-off) live in
   [`homeassistant/`](homeassistant/).
@@ -68,6 +69,20 @@ pnpm lint       # eslint across the workspace
 pnpm format     # prettier check
 pnpm build      # build all packages
 ```
+
+### The installable app
+
+The SPA offers to install itself: Chromium browsers get a one-click install,
+and Safari on iOS/macOS — which has no install API — gets directions to the
+menu item that does it. The offer hides itself once the app is installed, and a
+dismissal is remembered for a month.
+
+The service worker behind it is only registered in production builds, so test
+installability with `pnpm --filter @heater-control/web preview` rather than
+`pnpm dev:web`. App icons are generated from
+[`packages/web/icons/app-icon.svg`](packages/web/icons/app-icon.svg) by
+`packages/web/icons/generate.sh` (needs ImageMagick); rerun it after editing the
+artwork.
 
 ## Deployment
 

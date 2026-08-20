@@ -1,5 +1,7 @@
 .app {
   min-height: 100vh;
+  /* Zero in a browser tab; clears the home indicator in the installed app. */
+  padding-bottom: env(safe-area-inset-bottom);
   background: var(--color-bg);
 }
 
